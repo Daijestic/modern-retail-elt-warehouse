@@ -3,45 +3,64 @@
 import pandas as pd
 import uuid
 from datetime import datetime
+from pathlib import Path
 
 from db import get_engine
+from validators import validate_dataframe
 from logger import get_logger
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+file_path = BASE_DIR / "data/raw/customers.csv"
 
 logger = get_logger()
 
 def load_customers():
     run_id = str(uuid.uuid4())
     start_time = datetime.now()
-
-    engine = get_engine()
-
     try:
-        logger.info("Reading CSV...")
-        df = pd.read_csv("data/raw/customers.csv")
+        with get_engine().begin() as conn:
+            logger.info("Reading CSV...")
+            df = pd.read_csv(file_path)
+            validate_dataframe(df)
 
-        row_count = len(df)
+            df = df.drop_duplicates(subset=["customer_id"])
 
-        logger.info(f"Rows to insert: {row_count}")
+            existing_ids = pd.read_sql(
+                f"""
+                SELECT customer_id
+                FROM raw.raw_customers
+                WHERE customer_id IN ({','.join(map(str, df['customer_id'].tolist()))})
+                """,
+                con=conn
+            )
 
-        # load vào raw schema
-        df.to_sql(
-            "raw_customers",
-            engine,
-            schema="raw",
-            if_exists="append",
-            index=False
-        )
+            df = df[~df["customer_id"].isin(existing_ids["customer_id"])]
 
-        status = "SUCCESS"
-        error_message = None
+            row_count = len(df)
 
-        logger.info("Load success!")
+            logger.info(f"Rows to insert: {row_count}")
+
+            # load vào raw schema
+            df.to_sql(
+                "raw_customers",
+                con=conn,
+                schema="raw",
+                if_exists="append",
+                index=False,
+                method="multi",
+                chunksize=1000
+            )
+
+            status = "SUCCESS"
+            error_message = None
+
+            logger.info(f"Inserted {row_count} rows into raw.raw_customers")
 
     except Exception as e:
         status = "FAILED"
         error_message = str(e)
         row_count = 0
-
+        logger.exception("Ingestion failed")
         logger.error(f"Error: {error_message}")
 
     finally:
@@ -58,14 +77,17 @@ def load_customers():
             "status": status,
             "error_message": error_message
         }])
-
-        log_df.to_sql(
-            "ingestion_runs",
-            engine,
-            schema="raw",
-            if_exists="append",
-            index=False
-        )
+        try:
+            with get_engine().begin() as conn:
+                log_df.to_sql(
+                    "ingestion_runs",
+                    con=conn,
+                    schema="raw",
+                    if_exists="append",
+                    index=False
+                )
+        except Exception:
+            logger.exception("Failed to log ingestion run")
 
         logger.info("Logged ingestion run")
 
