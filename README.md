@@ -23,13 +23,14 @@ CSV Retail Dataset
 → Data quality tests  
 → Metabase dashboard
 
-## Current Status
+## Data Ingestion
 
-- [x] Project structure
-- [x] PostgreSQL local database
-- [x] Raw schema
-- [ ] Python CSV ingestion
-- [ ] dbt staging models
-- [ ] dbt marts
-- [ ] Data quality tests
-- [ ] Dashboard
+This project implements a config-driven ingestion pipeline that loads multiple CSV files into a PostgreSQL raw layer.
+
+Key features:
+
+- Multi-table ingestion using configuration
+- Schema validation per table
+- Idempotent loading (deduplication against existing records)
+- Batch insert for performance
+- Ingestion logging with run tracking
