@@ -7,9 +7,10 @@ TABLE_CONFIG = [
         "required_columns": [
             "customer_id",
             "customer_unique_id",
+            "customer_zip_code_prefix",
             "customer_city",
-            "customer_state"
-        ]
+            "customer_state",
+        ],
     },
     {
         "name": "orders",
@@ -20,7 +21,7 @@ TABLE_CONFIG = [
             "order_id",
             "customer_id",
             "order_status",
-            "order_purchase_timestamp"
-        ]
-    }
+            "order_purchase_timestamp",
+        ],
+    },
 ]
