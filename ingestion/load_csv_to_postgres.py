@@ -1,110 +1,131 @@
-# ingestion/load_csv_to_postgres.py
-
-import pandas as pd
 import uuid
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
+from sqlalchemy import text
+
 from db import get_engine
-from validators import validate_dataframe
 from logger import get_logger
 from table_config import TABLE_CONFIG
+from validators import (
+    normalize_column_names,
+    validate_file_exists,
+    validate_primary_key,
+    validate_required_columns,
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 logger = get_logger()
 
-def load_table(table_cfg):
-    run_id = str(uuid.uuid4())
-    start_time = datetime.now()
 
-    file_path = BASE_DIR / f"data/raw/{table_cfg['file']}"
+def record_ingestion_run(
+    run_id: str,
+    source_name: str,
+    target_table: str,
+    row_count: int,
+    started_at: datetime,
+    finished_at: datetime,
+    status: str,
+    error_message: str | None,
+) -> None:
+    log_df = pd.DataFrame(
+        [
+            {
+                "run_id": run_id,
+                "source_name": source_name,
+                "target_table": target_table,
+                "row_count": row_count,
+                "started_at": started_at,
+                "finished_at": finished_at,
+                "status": status,
+                "error_message": error_message,
+            }
+        ]
+    )
+
+    engine = get_engine()
+
+    with engine.begin() as conn:
+        log_df.to_sql(
+            "ingestion_runs",
+            con=conn,
+            schema="raw",
+            if_exists="append",
+            index=False,
+        )
+
+
+def load_table(table_cfg: dict) -> None:
+    run_id = str(uuid.uuid4())
+    started_at = datetime.now()
+
+    source_name = table_cfg["name"]
+    target_table = table_cfg["table"]
+    pk = table_cfg["pk"]
+    file_path = BASE_DIR / "data" / "raw" / table_cfg["file"]
+
+    row_count = 0
+    status = "SUCCESS"
+    error_message = None
+
+    logger.info("Starting ingestion for %s", source_name)
 
     try:
-        with get_engine().begin() as conn:
-            logger.info(f"{table_cfg['name']} - reading CSV...")
+        validate_file_exists(file_path)
 
-            if not file_path.exists():
-                raise FileNotFoundError(f"{file_path} not found")
+        df = pd.read_csv(file_path)
+        df = normalize_column_names(df)
 
-            df = pd.read_csv(file_path)
-            df[table_cfg["pk"]] = df[table_cfg["pk"]].astype(str)
+        validate_required_columns(df, table_cfg["required_columns"])
+        validate_primary_key(df, pk)
 
-            validate_dataframe(df, table_cfg["required_columns"])
+        df[pk] = df[pk].astype(str)
+        df = df.drop_duplicates(subset=[pk])
 
-            df = df.drop_duplicates(subset=[table_cfg["pk"]])
+        row_count = len(df)
 
-            if df.empty:
-                row_count = 0
-            else:
-                existing_ids = pd.read_sql(
-                    f"""
-                    SELECT {table_cfg['pk']}
-                    FROM raw.{table_cfg['table']}
-                    WHERE {table_cfg['pk']} IN ({','.join([f"'{x}'" for x in df[table_cfg["pk"]].tolist()])})
-                    """,
-                    con=conn
-                )
+        engine = get_engine()
 
-                df = df[~df[table_cfg["pk"]].isin(existing_ids[table_cfg["pk"]])]
-                row_count = len(df)
+        with engine.begin() as conn:
+            conn.execute(text(f"TRUNCATE TABLE raw.{target_table};"))
 
-            logger.info(f"Rows to insert: {row_count}")
+            df.to_sql(
+                target_table,
+                con=conn,
+                schema="raw",
+                if_exists="append",
+                index=False,
+                method="multi",
+                chunksize=1000,
+            )
 
-            # load vào raw schema
-            if row_count > 0:
-                df.to_sql(
-                    table_cfg["table"],
-                    con=conn,
-                    schema="raw",
-                    if_exists="append",
-                    index=False,
-                    method="multi",
-                    chunksize=1000
-                )
+        logger.info("Finished ingestion for %s with %s rows", source_name, row_count)
 
-            status = "SUCCESS"
-            error_message = None
-
-            logger.info(f"Inserted {row_count} rows into raw.{table_cfg['table']}")
-
-    except Exception as e:
+    except Exception as exc:
         status = "FAILED"
-        error_message = str(e)
-        row_count = 0
-        logger.exception(f"{table_cfg['name']} ingestion failed")
+        error_message = str(exc)
+        logger.exception("Ingestion failed for %s", source_name)
 
     finally:
-        end_time = datetime.now()
+        finished_at = datetime.now()
 
-        # insert log vào ingestion_runs
-        log_df = pd.DataFrame([{
-            "run_id": run_id,
-            "source_name": table_cfg["name"],
-            "target_table": f"raw.{table_cfg['table']}",
-            "row_count": row_count,
-            "started_at": start_time,
-            "finished_at": end_time,
-            "status": status,
-            "error_message": error_message
-        }])
-        try:
-            with get_engine().begin() as conn:
-                log_df.to_sql(
-                    "ingestion_runs",
-                    con=conn,
-                    schema="raw",
-                    if_exists="append",
-                    index=False
-                )
-        except Exception:
-            logger.exception("Failed to log ingestion run")
+        record_ingestion_run(
+            run_id=run_id,
+            source_name=source_name,
+            target_table=f"raw.{target_table}",
+            row_count=row_count,
+            started_at=started_at,
+            finished_at=finished_at,
+            status=status,
+            error_message=error_message,
+        )
 
-        logger.info("Logged ingestion run")
 
-def run_all():
-    for table in TABLE_CONFIG:
-        load_table(table)
+def run_all() -> None:
+    for table_cfg in TABLE_CONFIG:
+        load_table(table_cfg)
+
 
 if __name__ == "__main__":
     run_all()
