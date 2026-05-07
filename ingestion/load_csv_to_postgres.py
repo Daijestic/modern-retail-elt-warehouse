@@ -5,10 +5,10 @@ from pathlib import Path
 import pandas as pd
 from sqlalchemy import text
 
-from db import get_engine
-from logger import get_logger
-from table_config import TABLE_CONFIG
-from validators import (
+from ingestion.db import get_engine
+from ingestion.logger import get_logger
+from ingestion.table_config import TABLE_CONFIG
+from ingestion.validators import (
     normalize_column_names,
     validate_file_exists,
     validate_primary_key,
@@ -50,7 +50,7 @@ def record_ingestion_run(
         log_df.to_sql(
             "ingestion_runs",
             con=conn,
-            schema="raw",
+            schema="metadata",
             if_exists="append",
             index=False,
         )

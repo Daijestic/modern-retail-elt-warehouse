@@ -1,6 +1,7 @@
 CREATE SCHEMA IF NOT EXISTS raw;
+CREATE SCHEMA IF NOT EXISTS metadata;
 
-CREATE TABLE IF NOT EXISTS raw.ingestion_runs (
+CREATE TABLE IF NOT EXISTS metadata.ingestion_runs (
     run_id TEXT PRIMARY KEY,
     source_name TEXT NOT NULL,
     target_table TEXT NOT NULL,
