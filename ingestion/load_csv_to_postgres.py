@@ -81,8 +81,17 @@ def load_table(table_cfg: dict) -> None:
         validate_primary_key(df, pk)
 
         df[pk] = df[pk].astype(str)
-        df = df.drop_duplicates(subset=[pk])
 
+        duplicate_count = df.duplicated(subset=[pk]).sum()
+        if duplicate_count > 0:
+            logger.warning(
+                "Found %s duplicate rows for primary key %s in source %s. Keeping last record.",
+                duplicate_count,
+                pk,
+                source_name,
+            )
+
+        df = df.drop_duplicates(subset=[pk], keep="last")
         row_count = len(df)
 
         engine = get_engine()
@@ -124,6 +133,10 @@ def load_table(table_cfg: dict) -> None:
 
 def run_all() -> None:
     for table_cfg in TABLE_CONFIG:
+        if not table_cfg.get("enabled", True):
+            logger.info("Skipping disabled source: %s", table_cfg["name"])
+            continue
+
         load_table(table_cfg)
 
 

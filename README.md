@@ -145,8 +145,8 @@ The ingestion layer loads raw retail CSV files into PostgreSQL raw tables.
 Current raw tables:
 
 ```text
-raw.raw_customers
-raw.raw_orders
+metadata.raw_customers
+metadata.raw_orders
 ```
 
 Metadata tables:
