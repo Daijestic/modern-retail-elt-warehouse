@@ -1,0 +1,4 @@
+customer_id,customer_unique_id,customer_zip_code_prefix,customer_city,customer_state
+c001,u001,100000,ho chi minh,SP
+c002,u002,700000,ha noi,RJ
+c003,u003,500000,da nang,MG
