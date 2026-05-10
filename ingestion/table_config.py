@@ -11,6 +11,7 @@ TABLE_CONFIG = [
             "customer_city",
             "customer_state",
         ],
+        "enabled": True,
     },
     {
         "name": "orders",
@@ -23,5 +24,44 @@ TABLE_CONFIG = [
             "order_status",
             "order_purchase_timestamp",
         ],
+        "enabled": True,
+    },
+    {
+        "name": "order_items",
+        "file": "order_items.csv",
+        "table": "raw_order_items",
+        "pk": "order_id",
+        "required_columns": [
+            "order_id",
+            "order_item_id",
+            "product_id",
+            "seller_id",
+            "price",
+            "freight_value",
+        ],
+        "enabled": False,
+    },
+    {
+        "name": "products",
+        "file": "products.csv",
+        "table": "raw_products",
+        "pk": "product_id",
+        "required_columns": [
+            "product_id",
+            "product_category_name",
+        ],
+        "enabled": False,
+    },
+    {
+        "name": "payments",
+        "file": "payments.csv",
+        "table": "raw_payments",
+        "pk": "order_id",
+        "required_columns": [
+            "order_id",
+            "payment_type",
+            "payment_value",
+        ],
+        "enabled": False,
     },
 ]
