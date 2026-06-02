@@ -1,6 +1,6 @@
 # ingestion/db.py
 from sqlalchemy import create_engine
-from config import DB_CONFIG
+from ingestion.config import DB_CONFIG
 
 def get_engine():
     conn_str = (

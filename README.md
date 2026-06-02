@@ -22,31 +22,38 @@ This project builds a production-like ELT warehouse that:
 
 ---
 
-# Current Project Status (After Week 2)
+# Current Project Status
 
 ## Completed
 
-- Python ingestion pipeline
-- PostgreSQL raw schema
-- Config-driven multi-table loading
+- Python ingestion pipeline for CSV-to-PostgreSQL loading
+- PostgreSQL raw schema for customers and orders
+- Metadata schema with `metadata.ingestion_runs`
+- Config-driven ingestion via `TABLE_CONFIG`
 - Required column validation
 - Primary key null validation
-- Column normalization
-- Idempotent reload strategy
-- Ingestion run tracking
+- Column name normalization
+- Duplicate handling by primary key
+- Idempotent reload strategy using `TRUNCATE + INSERT`
+- Structured logging
 - Basic pytest coverage
-- Dockerized local PostgreSQL environment
+- Dockerized PostgreSQL local environment
+- SQL practice files for joins, CTEs, window functions, and data quality checks
 
 ## In Progress
 
+- Expanding raw ingestion to order_items, products, payments, and shipments
+- dbt project setup
 - dbt staging models
-- Docker Compose improvements
 - Metabase integration
+- Documentation cleanup
 
 ## Planned
 
+- dbt intermediate models
 - dbt marts and star schema
-- Data quality tests
+- dbt tests and source freshness
+- Data quality gates
 - Airflow orchestration
 - GitHub Actions CI/CD
 - AWS-ready architecture notes
@@ -77,15 +84,21 @@ CSV Retail Dataset
         ↓
 Python ingestion pipeline
         ↓
-Validation and normalization
+Validation
+- file existence check
+- required column validation
+- primary key null validation
+- column name normalization
+- duplicate handling
         ↓
-PostgreSQL raw layer
+PostgreSQL
+- raw.raw_customers
+- raw.raw_orders
+- metadata.ingestion_runs
         ↓
-Ingestion metadata tracking
+SQL practice / dbt modeling layer (in progress)
         ↓
-dbt staging/intermediate/marts
-        ↓
-Analytics dashboards
+Analytics marts and dashboard (planned)
 ```
 
 ---
@@ -145,14 +158,14 @@ The ingestion layer loads raw retail CSV files into PostgreSQL raw tables.
 Current raw tables:
 
 ```text
-metadata.raw_customers
-metadata.raw_orders
+raw.raw_customers
+raw.raw_orders
 ```
 
 Metadata tables:
 
 ```text
-raw.ingestion_runs
+metadata.ingestion_runs
 ```
 
 ---
@@ -202,7 +215,7 @@ Tracked fields include:
 
 ---
 
-# Local Development Setup
+# How to Run Locally
 
 ## 1. Start PostgreSQL
 
@@ -210,19 +223,42 @@ Tracked fields include:
 make up
 ```
 
-## 2. Install dependencies
+---
+
+## 2. Install Python Dependencies
 
 ```bash
 make install
 ```
 
-## 3. Run ingestion pipeline
+---
+
+## 3. Prepare Raw CSV Files
+
+Place source CSV files under:
+
+```text
+data/raw/
+```
+
+Required files for the current MVP:
+
+```text
+customers.csv
+orders.csv
+```
+
+---
+
+## 4. Run Ingestion
 
 ```bash
 make load
 ```
 
-## 4. Run tests
+---
+
+## 5. Run Tests
 
 ```bash
 make test
@@ -230,16 +266,43 @@ make test
 
 ---
 
-# Validate Loaded Data
+## 6. Open PostgreSQL Shell
+
+```bash
+make sql
+```
+
+---
+
+## 7. Validate Loaded Data
+
+Check row counts:
 
 ```sql
-SELECT count(*) FROM raw.raw_customers;
+SELECT COUNT(*) AS customer_count
+FROM raw.raw_customers;
 
-SELECT count(*) FROM raw.raw_orders;
+SELECT COUNT(*) AS order_count
+FROM raw.raw_orders;
+```
 
+Check ingestion history:
+
+```sql
 SELECT *
-FROM raw.ingestion_runs
+FROM metadata.ingestion_runs
 ORDER BY started_at DESC;
+```
+
+---
+
+## Expected Result
+
+```text
+✓ raw.raw_customers contains customer records
+✓ raw.raw_orders contains order records
+✓ metadata.ingestion_runs contains ingestion logs
+✓ No ingestion errors are reported
 ```
 
 ---
