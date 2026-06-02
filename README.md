@@ -160,6 +160,10 @@ Current raw tables:
 ```text
 raw.raw_customers
 raw.raw_orders
+raw.raw_order_items
+raw.raw_products
+raw.raw_payments
+raw.raw_shipments
 ```
 
 Metadata tables:
@@ -321,7 +325,20 @@ Run tests:
 ```bash
 pytest
 ```
+---
+# Screenshots
 
+## Raw Table Counts
+
+![Raw Table Counts](screenshots/raw_table_counts.png)
+
+## Ingestion Runs
+
+![Ingestion Runs](screenshots/ingestion_runs.png)
+
+## Tests
+
+![Tests Pass](screenshots/tests_pass.png)
 ---
 
 # Engineering Practices

@@ -21,9 +21,15 @@ def validate_required_columns(df: pd.DataFrame, required_columns: list[str]) -> 
         raise ValueError(f"Missing required columns: {sorted(missing_columns)}")
 
 
-def validate_primary_key(df: pd.DataFrame, pk: str) -> None:
-    if pk not in df.columns:
-        raise ValueError(f"Primary key column not found: {pk}")
+def validate_primary_key(df: pd.DataFrame, pk: str | list[str]) -> None:
+    if isinstance(pk, str):
+        pk_columns = [pk]
+    else:
+        pk_columns = pk
 
-    if df[pk].isna().any():
-        raise ValueError(f"Primary key column contains null values: {pk}")
+    missing_pk_columns = set(pk_columns) - set(df.columns)
+    if missing_pk_columns:
+        raise ValueError(f"Primary key column not found: {sorted(missing_pk_columns)}")
+
+    if df[pk_columns].isna().any().any():
+        raise ValueError(f"Primary key columns contain null values: {pk_columns}")

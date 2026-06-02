@@ -63,6 +63,7 @@ def load_table(table_cfg: dict) -> None:
     source_name = table_cfg["name"]
     target_table = table_cfg["table"]
     pk = table_cfg["pk"]
+    pk_columns = [pk] if isinstance(pk, str) else pk
     file_path = BASE_DIR / "data" / "raw" / table_cfg["file"]
 
     row_count = 0
@@ -80,18 +81,19 @@ def load_table(table_cfg: dict) -> None:
         validate_required_columns(df, table_cfg["required_columns"])
         validate_primary_key(df, pk)
 
-        df[pk] = df[pk].astype(str)
+        for col in pk_columns:
+            df[col] = df[col].astype(str)
 
-        duplicate_count = df.duplicated(subset=[pk]).sum()
+        duplicate_count = df.duplicated(subset=pk_columns).sum()
         if duplicate_count > 0:
             logger.warning(
                 "Found %s duplicate rows for primary key %s in source %s. Keeping last record.",
                 duplicate_count,
-                pk,
+                pk_columns,
                 source_name,
             )
 
-        df = df.drop_duplicates(subset=[pk], keep="last")
+        df = df.drop_duplicates(subset=pk_columns, keep="last")
         row_count = len(df)
 
         engine = get_engine()

@@ -30,7 +30,7 @@ TABLE_CONFIG = [
         "name": "order_items",
         "file": "order_items.csv",
         "table": "raw_order_items",
-        "pk": "order_id",
+        "pk": ["order_id", "order_item_id"],
         "required_columns": [
             "order_id",
             "order_item_id",
@@ -39,7 +39,7 @@ TABLE_CONFIG = [
             "price",
             "freight_value",
         ],
-        "enabled": False,
+        "enabled": True,
     },
     {
         "name": "products",
@@ -50,18 +50,31 @@ TABLE_CONFIG = [
             "product_id",
             "product_category_name",
         ],
-        "enabled": False,
+        "enabled": True,
     },
     {
         "name": "payments",
         "file": "payments.csv",
         "table": "raw_payments",
-        "pk": "order_id",
+        "pk": ["order_id", "payment_sequential"],
         "required_columns": [
             "order_id",
+            "payment_sequential",
             "payment_type",
             "payment_value",
         ],
-        "enabled": False,
+        "enabled": True,
+    },
+    {
+        "name": "shipments",
+        "file": "shipments.csv",
+        "table": "raw_shipments",
+        "pk": "order_id",
+        "required_columns": [
+            "order_id",
+            "delivered_customer_date",
+            "estimated_delivery_date",
+        ],
+        "enabled": True,
     },
 ]

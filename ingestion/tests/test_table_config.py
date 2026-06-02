@@ -14,4 +14,10 @@ def test_each_table_config_has_required_keys():
 
 def test_each_table_config_has_primary_key_in_required_columns():
     for table_cfg in TABLE_CONFIG:
-        assert table_cfg["pk"] in table_cfg["required_columns"]
+        pk = table_cfg["pk"]
+
+        if isinstance(pk, str):
+            assert pk in table_cfg["required_columns"]
+        else:
+            for col in pk:
+                assert col in table_cfg["required_columns"]

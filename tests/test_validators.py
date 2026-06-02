@@ -42,5 +42,8 @@ def test_validate_required_columns_raises_for_missing_column():
 def test_validate_primary_key_raises_for_null_pk():
     df = pd.DataFrame({"customer_id": [None, "c2"]})
 
-    with pytest.raises(ValueError, match="contains null values"):
+    with pytest.raises(
+        ValueError,
+        match="Primary key columns contain null values"
+    ):
         validate_primary_key(df, "customer_id")
