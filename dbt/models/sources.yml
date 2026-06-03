@@ -1,0 +1,35 @@
+version: 2
+
+sources:
+  - name: raw
+    database: retail_dw
+    schema: raw
+    description: "Raw retail tables loaded by the Python ingestion pipeline."
+
+    freshness:
+      warn_after:
+        count: 24
+        period: hour
+      error_after:
+        count: 48
+        period: hour
+    loaded_at_field: ingested_at
+
+    tables:
+      - name: raw_customers
+        description: "Raw customer data."
+
+      - name: raw_orders
+        description: "Raw order data."
+
+      - name: raw_order_items
+        description: "Raw order item data."
+
+      - name: raw_products
+        description: "Raw product catalog data."
+
+      - name: raw_payments
+        description: "Raw payment transaction data."
+
+      - name: raw_shipments
+        description: "Raw shipment and delivery date data."

@@ -24,36 +24,31 @@ This project builds a production-like ELT warehouse that:
 
 # Current Project Status
 
-## Completed
-
-- Python ingestion pipeline for CSV-to-PostgreSQL loading
-- PostgreSQL raw schema for customers and orders
-- Metadata schema with `metadata.ingestion_runs`
-- Config-driven ingestion via `TABLE_CONFIG`
+### Completed
+- Python CSV ingestion pipeline
+- PostgreSQL raw schema
+- Raw tables: customers, orders, order_items, products, payments, shipments
+- Metadata tracking with metadata.ingestion_runs
 - Required column validation
-- Primary key null validation
-- Column name normalization
-- Duplicate handling by primary key
-- Idempotent reload strategy using `TRUNCATE + INSERT`
+- Primary key validation
+- Composite key support for order_items and payments
+- Idempotent reload strategy with TRUNCATE + INSERT
 - Structured logging
 - Basic pytest coverage
-- Dockerized PostgreSQL local environment
-- SQL practice files for joins, CTEs, window functions, and data quality checks
-
-## In Progress
-
-- Expanding raw ingestion to order_items, products, payments, and shipments
 - dbt project setup
+- dbt raw sources
 - dbt staging models
-- Metabase integration
-- Documentation cleanup
+- dbt generic tests for staging models
+- dbt source freshness configuration
 
-## Planned
-
+### In Progress
 - dbt intermediate models
-- dbt marts and star schema
-- dbt tests and source freshness
-- Data quality gates
+- marts and star schema
+- Metabase dashboard
+
+### Planned
+- SCD Type 2 snapshot
+- incremental model
 - Airflow orchestration
 - GitHub Actions CI/CD
 - AWS-ready architecture notes
@@ -328,17 +323,40 @@ pytest
 ---
 # Screenshots
 
-## Raw Table Counts
+## Raw Layer Validation
+
+### Raw Table Counts
 
 ![Raw Table Counts](screenshots/raw_table_counts.png)
 
-## Ingestion Runs
+### Ingestion Runs
 
 ![Ingestion Runs](screenshots/ingestion_runs.png)
 
-## Tests
+## Test Results
 
-![Tests Pass](screenshots/tests_pass.png)
+### Python Unit Tests
+
+![Python Tests Pass](screenshots/tests_pass.png)
+
+## dbt Staging Layer
+
+### dbt Debug
+
+![dbt Debug Pass](screenshots/dbt_debug_pass.png)
+
+### dbt Run - Staging Models
+
+![dbt Run Staging Pass](screenshots/dbt_run_staging_pass.png)
+
+### dbt Test - Staging Models
+
+![dbt Test Staging Pass](screenshots/dbt_test_staging_pass.png)
+
+### Staging Table Counts
+
+![Staging Table Counts](screenshots/staging_table_counts.png)
+
 ---
 
 # Engineering Practices
@@ -393,9 +411,14 @@ Future improvements:
 # How to Run End-to-End
 
 ```bash
-make reset
+make up
 make load
 make test
+make dbt-debug
+make dbt-run-staging
+make dbt-test-staging
+make dbt-freshness
+make dbt-docs
 ```
 
 ---

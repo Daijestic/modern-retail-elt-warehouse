@@ -29,3 +29,24 @@ sql:
 sample-data:
 	cp data/sample/customers.csv data/raw/customers.csv
 	cp data/sample/orders.csv data/raw/orders.csv
+
+dbt-debug:
+	dbt debug --project-dir dbt --profiles-dir dbt
+
+dbt-run:
+	dbt run --project-dir dbt --profiles-dir dbt
+
+dbt-run-staging:
+	dbt run --project-dir dbt --profiles-dir dbt --select staging
+
+dbt-test:
+	dbt test --project-dir dbt --profiles-dir dbt
+
+dbt-test-staging:
+	dbt test --project-dir dbt --profiles-dir dbt --select staging
+
+dbt-freshness:
+	dbt source freshness --project-dir dbt --profiles-dir dbt
+
+dbt-docs:
+	dbt docs generate --project-dir dbt --profiles-dir dbt
