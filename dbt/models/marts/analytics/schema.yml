@@ -1,0 +1,54 @@
+version: 2
+
+models:
+  - name: mart_daily_revenue
+    description: "Daily revenue mart for business reporting."
+    columns:
+      - name: order_date
+        tests:
+          - not_null
+          - unique
+
+      - name: total_orders
+        tests:
+          - not_null
+
+      - name: total_revenue
+        tests:
+          - not_null
+
+      - name: average_order_value
+        tests:
+          - not_null
+
+  - name: mart_product_performance
+    description: "Product performance mart by product and category."
+    columns:
+      - name: product_id
+        tests:
+          - not_null
+          - unique
+
+      - name: product_category_name
+        tests:
+          - not_null
+
+      - name: total_quantity
+        tests:
+          - not_null
+
+      - name: total_revenue
+        tests:
+          - not_null
+
+  - name: mart_delivery_performance
+    description: "Delivery performance mart at order grain."
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+          - unique
+
+      - name: is_late_delivery
+        tests:
+          - not_null
