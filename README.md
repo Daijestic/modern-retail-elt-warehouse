@@ -2,7 +2,7 @@
 
 Production-style retail ELT warehouse built with **Python, PostgreSQL, Docker, and dbt**.
 
-This project focuses on building a reliable batch ELT pipeline for retail analytics, including raw data ingestion, validation, idempotent loading, ingestion tracking, dbt staging models, dbt marts, data quality tests, and analytics-ready tables for revenue, product, and delivery reporting.
+This project focuses on building a reliable batch ELT pipeline for retail analytics, including raw data ingestion, validation, idempotent loading, ingestion tracking, dbt staging models, dbt marts, data quality tests, SQL-based data quality checks, and analytics-ready tables for revenue, product, and delivery reporting.
 
 ---
 
@@ -19,7 +19,7 @@ This project builds a modern ELT warehouse that:
 * tracks every ingestion run with row counts and status
 * transforms raw data into clean dbt staging models
 * builds analytics-ready marts for revenue, product, and delivery analysis
-* applies dbt tests to improve data reliability
+* applies dbt tests and SQL quality checks to improve data reliability
 * prepares the warehouse foundation for future dashboarding and orchestration
 
 ---
@@ -28,41 +28,44 @@ This project builds a modern ELT warehouse that:
 
 ### Completed
 
-* Python ingestion pipeline
-* PostgreSQL raw schema
-* Config-driven multi-table loading
-* Required column validation
-* Primary key null validation
-* Column name normalization
-* Idempotent reload strategy using `TRUNCATE + INSERT`
-* Ingestion run tracking
-* Structured logging
-* Basic pytest coverage
-* Dockerized local PostgreSQL environment
-* dbt project setup
-* dbt raw sources
-* dbt staging models
-* dbt staging tests
-* Basic dbt marts
-* Core dimension and fact tables
-* Analytics marts for revenue, product performance, and delivery performance
+- Python ingestion pipeline
+- PostgreSQL raw schema
+- Config-driven multi-table loading
+- Required column validation
+- Primary key null validation
+- Composite primary key validation
+- Column name normalization
+- Idempotent reload strategy using `TRUNCATE + INSERT`
+- Ingestion run tracking
+- Structured logging
+- Basic pytest coverage
+- Dockerized local PostgreSQL environment
+- dbt project setup
+- dbt raw sources
+- dbt staging models
+- dbt staging tests
+- Basic dbt marts
+- Core dimension and fact tables
+- Analytics marts for revenue, product performance, and delivery performance
+- SQL data quality checks
+- SQL interview practice queries
+- README screenshots for ingestion, dbt staging, dbt marts, and SQL outputs
 
 ### In Progress
 
-* SQL data quality checks
-* SQL interview practice queries
-* README screenshots
-* Metabase dashboard integration
+- Metabase dashboard integration
+- More project documentation and interview notes
 
 ### Planned
 
-* More custom dbt data quality tests
-* Metabase dashboard
-* Airflow orchestration
-* GitHub Actions CI/CD
-* AWS-ready architecture notes
-* SCD Type 2 snapshot
-* Incremental models
+- More custom dbt business tests
+- dbt source freshness checks
+- Metabase dashboard
+- Airflow orchestration
+- GitHub Actions CI/CD
+- AWS-ready architecture notes
+- SCD Type 2 snapshot
+- Incremental models
 
 ---
 
@@ -77,9 +80,9 @@ This project builds a modern ELT warehouse that:
 | Transformation   | dbt Core, dbt-postgres  |
 | Testing          | pytest, dbt tests       |
 | Containerization | Docker Compose          |
-| BI               | Metabase, planned       |
-| Orchestration    | Airflow, planned        |
-| CI/CD            | GitHub Actions, planned |
+| BI               | Metabase (planned)      |
+| Orchestration    | Airflow (planned)       |
+| CI/CD            | GitHub Actions (planned) |
 
 ---
 
@@ -102,8 +105,16 @@ dbt marts layer
         ↓
 Analytics-ready tables
         ↓
-Metabase dashboard, planned
+SQL analysis / Metabase dashboard (planned)
 ```
+
+The current MVP focuses on a clear batch ELT flow:
+
+```text
+raw → staging → marts
+```
+
+Future versions will add orchestration, CI/CD, dashboarding, and AWS-ready design notes.
 
 ---
 
@@ -154,6 +165,13 @@ modern-retail-elt-warehouse/
 │               └── schema.yml
 │
 ├── sql_practice/
+│   ├── 01_basic_select.sql
+│   ├── 02_joins.sql
+│   ├── 03_cte.sql
+│   ├── 04_window_functions.sql
+│   ├── 05_data_quality_checks.sql
+│   └── 06_business_analysis.sql
+│
 ├── screenshots/
 ├── docs/
 ├── docker-compose.yml
@@ -203,6 +221,12 @@ record ingestion run metadata
         ↓
 log success or failure
 ```
+
+### Idempotency Strategy
+
+The current MVP uses `TRUNCATE + INSERT` for raw table reloads. This keeps reruns deterministic and avoids duplicate appends when the same CSV file is loaded multiple times.
+
+This strategy is simple and appropriate for a local batch MVP. For larger datasets, a future version should use incremental loading based on source update timestamps or ingestion watermarks.
 
 ---
 
@@ -295,6 +319,16 @@ mart_product_performance
 mart_delivery_performance
 ```
 
+### Current Modeling Scope
+
+The current MVP uses:
+
+```text
+raw → staging → marts
+```
+
+An intermediate layer is planned for future improvement when business logic becomes more complex.
+
 ---
 
 ## 9. Data Model
@@ -316,11 +350,21 @@ mart_delivery_performance
 | mart_product_performance  | One row per product_id | total_quantity, total_orders, total_revenue      |
 | mart_delivery_performance | One row per order_id   | delivery_days, is_late_delivery                  |
 
+### Revenue Logic
+
+The current MVP calculates item-level gross revenue as:
+
+```text
+gross_revenue = item_price + freight_value
+```
+
+To avoid double counting revenue, order item metrics and payment metrics are aggregated at `order_id` grain before being joined into `fact_orders`.
+
 ---
 
 ## 10. Data Quality
 
-Current data quality checks include both Python-level validation and dbt tests.
+Current data quality checks include Python-level validation, dbt tests, and manual SQL quality checks.
 
 ### Python Ingestion Validation
 
@@ -346,9 +390,85 @@ cd dbt
 dbt test --profiles-dir .
 ```
 
+### Manual SQL Quality Checks
+
+Manual SQL checks are stored in:
+
+```text
+sql_practice/05_data_quality_checks.sql
+```
+
+They cover:
+
+- duplicate primary key checks
+- null value checks
+- orphan foreign key checks
+- negative revenue and payment checks
+- delivery date consistency checks
+- mart output sanity checks
+
+## 11. SQL Practice and Data Quality Checks
+
+This project includes a dedicated SQL practice module covering analytical SQL patterns commonly used by Data Engineers and Data Analysts, along with data quality validation queries for the retail warehouse.
+
+```text
+sql_practice/
+├── 01_basic_select.sql
+├── 02_joins.sql
+├── 03_cte.sql
+├── 04_window_functions.sql
+├── 05_data_quality_checks.sql
+└── 06_business_analysis.sql
+```
+
+### Covered SQL Topics
+
+#### Basic SQL
+- Filtering and aggregation
+- Grouping and sorting
+- Revenue and order metrics
+
+#### Joins
+- Customer-to-order relationships
+- Order-to-product relationships
+- Payment and shipment enrichment
+- Multi-table retail analytics queries
+
+#### Common Table Expressions
+- Revenue analysis
+- Customer order summaries
+- Delivery performance calculations
+- Multi-step analytical transformations
+
+#### Window Functions
+- `ROW_NUMBER()`
+- `RANK()`
+- `LAG()`
+- Running totals
+- Revenue ranking by product and category
+- Customer order sequencing
+
+#### Data Quality Validation
+- Raw table row count validation
+- Duplicate primary key detection
+- Null value checks
+- Orphan foreign key checks
+- Negative revenue and payment checks
+- Referential integrity validation
+
+#### Business Analytics
+- Daily revenue trends
+- Product performance analysis
+- Order status distribution
+- Customer purchasing behavior
+- Delivery performance metrics
+- Revenue by product category
+
+These SQL exercises are designed to strengthen SQL fundamentals while validating warehouse data quality and supporting common business reporting use cases.
+
 ---
 
-## 11. How to Run Locally
+## 12. How to Run Locally
 
 ### 1. Start PostgreSQL
 
@@ -385,7 +505,7 @@ dbt test --profiles-dir .
 
 ---
 
-## 12. Validate Loaded Data
+## 13. Validate Loaded Data
 
 ### Raw Table Counts
 
@@ -429,7 +549,7 @@ LIMIT 20;
 
 ---
 
-## 13. Analytics Outputs
+## 14. Analytics Outputs
 
 ### Daily Revenue Mart
 
@@ -457,9 +577,9 @@ LIMIT 20;
 
 ---
 
-## 14. Screenshots
+## 15. Screenshots
 
-## Pipeline Screenshots
+### Pipeline Screenshots
 
 ### Raw Layer
 
@@ -471,13 +591,43 @@ LIMIT 20;
 
 ---
 
+### SQL Analytics & Data Quality
+
+#### Data Quality Checks
+Validation queries used to identify null values, duplicates, orphan records, and invalid business data.
+
+![SQL Quality Checks](screenshots/sql_quality_checks.png)
+
+#### Revenue Analysis by Day
+Daily revenue aggregation query used to analyze sales performance trends.
+
+![SQL Revenue by Day](screenshots/sql_revenue_by_day.png)
+
+#### Top Products Analysis
+SQL query used to identify best-selling products and product categories.
+
+![SQL Top Products](screenshots/sql_top_products.png)
+
+#### Customer Order Sequencing (Window Function)
+ROW_NUMBER() window function used to determine purchase sequence and identify repeat customers.
+
+![SQL Window Customer Order Number](screenshots/sql_window_customer_order_number.png)
+
+---
+
 ### dbt Staging Layer
+
+#### dbt Debug
+![dbt Debug](screenshots/dbt_debug_pass.png)
 
 #### dbt Run Staging
 ![dbt Run Staging](screenshots/dbt_run_staging_pass.png)
 
 #### dbt Test Staging
 ![dbt Test Staging](screenshots/dbt_test_staging_pass.png)
+
+#### Staging Table Counts
+![Staging Table Counts](screenshots/staging_table_counts.png)
 
 ---
 
@@ -503,7 +653,7 @@ LIMIT 20;
 
 ---
 
-## 15. Engineering Practices
+## 16. Engineering Practices
 
 This project currently implements:
 
@@ -518,11 +668,14 @@ This project currently implements:
 * dbt model tests
 * Basic dimensional modeling
 * Analytics-ready marts
+* Manual SQL data quality checks
+* SQL interview practice queries
 
 Planned engineering improvements:
 
-* More custom SQL data quality checks
-* dbt source freshness checks
+* Convert important SQL quality checks into dbt singular tests
+* Add more custom dbt business tests
+* Add dbt source freshness checks
 * SCD Type 2 snapshot
 * Incremental models
 * Airflow orchestration
@@ -532,7 +685,7 @@ Planned engineering improvements:
 
 ---
 
-## 16. Interview Notes
+## 17. Interview Notes
 
 ### What does this project do?
 
@@ -554,66 +707,76 @@ The grain of `fact_orders` is one row per `order_id`.
 
 The project aggregates order item metrics and payment metrics by `order_id` before joining them into `fact_orders`. This prevents row multiplication when an order has multiple items or multiple payment records.
 
+### What SQL topics does this project demonstrate?
+
+The project includes SQL practice files for joins, CTEs, window functions, data quality checks, and business analysis queries such as daily revenue, product performance, delivery performance, and customer order sequencing.
+
+### What are the current limitations?
+
+The current MVP does not yet include Airflow orchestration, GitHub Actions CI/CD, Metabase dashboards, AWS deployment notes, SCD Type 2 snapshots, or incremental models. These are planned future improvements.
+
 ---
 
-## 17. Roadmap
+## 18. Roadmap
 
 ### Phase 1 - Ingestion Foundation
 
 Completed:
 
-* Python ingestion
-* PostgreSQL raw layer
-* Validation
-* Logging
-* Metadata tracking
-* Idempotent loading
-* Basic pytest coverage
+- Python ingestion
+- PostgreSQL raw layer
+- Validation
+- Logging
+- Metadata tracking
+- Idempotent loading
+- Basic pytest coverage
 
 ### Phase 2 - Warehouse Modeling
 
 Completed:
 
-* dbt staging models
-* dbt staging tests
-* basic dbt marts
-* dimension and fact tables
-* analytics marts
-
-Next:
-
-* SQL data quality checks
-* more business analysis queries
-* model documentation improvements
+- dbt staging models
+- dbt staging tests
+- basic dbt marts
+- dimension and fact tables
+- analytics marts
+- SQL practice queries
+- SQL data quality checks
+- README screenshots
 
 ### Phase 3 - Dashboard and Production Features
 
 Planned:
 
-* Metabase dashboard
-* Airflow DAG
-* GitHub Actions CI
-* advanced dbt tests
-* source freshness checks
-* AWS-ready architecture notes
+- Metabase dashboard
+- additional dbt business tests
+- source freshness checks
+- Airflow DAG
+- GitHub Actions CI
+- AWS-ready architecture notes
+- SCD Type 2 snapshot
+- incremental model
 
 ---
 
-## 18. Future Improvements
+## 19. Future Improvements
 
-* Add `dim_dates`
-* Add customer retention mart
-* Add custom business tests
-* Add source freshness checks
-* Add SCD Type 2 snapshot for product dimension
-* Add incremental model for daily revenue
-* Build Metabase dashboard
-* Add Airflow orchestration
-* Add GitHub Actions CI/CD
-* Add AWS target architecture documentation
+- Add `dim_dates`
+- Add `dim_sellers`
+- Add customer retention mart
+- Add intermediate dbt models
+- Convert important SQL quality checks into dbt singular tests
+- Add more custom business tests
+- Add source freshness checks
+- Add SCD Type 2 snapshot for product dimension
+- Add incremental model for daily revenue
+- Build Metabase dashboard
+- Add Airflow orchestration
+- Add GitHub Actions CI/CD
+- Add AWS target architecture documentation
 
 ---
 
-## 19. Author
+## 20. Author
 
 Built as part of a Data Engineering portfolio project focused on production-style ELT workflows and analytics engineering.
