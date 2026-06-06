@@ -1,30 +1,41 @@
 # Modern Retail ELT Warehouse
 
-Production-style retail ELT warehouse built with **Python, PostgreSQL, Docker, and dbt**.
+Production-style retail ELT warehouse built with **Python, PostgreSQL, Docker Compose, and dbt Core**.
 
-This project focuses on building a reliable batch ELT pipeline for retail analytics, including raw data ingestion, validation, idempotent loading, ingestion tracking, dbt staging models, dbt marts, data quality tests, SQL-based data quality checks, and analytics-ready tables for revenue, product, and delivery reporting.
+This project focuses on building a reliable batch ELT pipeline for retail analytics, including raw data ingestion, validation, idempotent loading, ingestion tracking, dbt staging models, dbt marts, dbt tests, source freshness checks, SQL data quality checks, and analytics-ready tables for revenue, product, and delivery reporting.
 
 ---
 
 ## 1. Business Problem
 
-Retail teams need reliable analytics for revenue, customer behavior, product performance, and delivery operations.
-
-However, raw operational data is often inconsistent, duplicated, missing required fields, or difficult to query directly for business reporting.
+Retail teams need reliable analytics for revenue, customer behavior, product performance, and delivery operations. However, raw operational data is often inconsistent, duplicated, missing required fields, or difficult to query directly for business reporting.
 
 This project builds a modern ELT warehouse that:
 
-* ingests raw retail CSV data into PostgreSQL
-* validates required columns and primary keys before loading
-* tracks every ingestion run with row counts and status
-* transforms raw data into clean dbt staging models
-* builds analytics-ready marts for revenue, product, and delivery analysis
-* applies dbt tests and SQL quality checks to improve data reliability
-* prepares the warehouse foundation for future dashboarding and orchestration
+- ingests raw retail CSV data into PostgreSQL;
+- validates required columns and primary keys before loading;
+- tracks every ingestion run with row counts, status, timestamps, and error messages;
+- transforms raw data into clean dbt staging models;
+- builds analytics-ready marts for revenue, product, and delivery analysis;
+- applies dbt tests and SQL checks to improve data reliability;
+- prepares the warehouse foundation for future dashboarding, orchestration, CI/CD, and cloud deployment.
 
 ---
 
-## 2. Current Project Status
+## 2. Project Highlights
+
+- Built a batch ELT warehouse for CSV-based retail data.
+- Implemented a config-driven Python ingestion pipeline.
+- Added required column validation, primary key validation, composite key validation, and column normalization.
+- Used an idempotent reload strategy with `TRUNCATE + INSERT` for raw tables.
+- Tracked ingestion history in `metadata.ingestion_runs`.
+- Built dbt staging models, core dimension/fact tables, and analytics marts.
+- Added dbt tests, source freshness checks, and SQL data quality checks.
+- Documented architecture, data model, data quality strategy, trade-offs, screenshots, and project story.
+
+---
+
+## 3. Current Project Status
 
 ### Completed
 
@@ -44,49 +55,46 @@ This project builds a modern ELT warehouse that:
 - dbt raw sources
 - dbt staging models
 - dbt staging tests
+- dbt source freshness check
 - Basic dbt marts
 - Core dimension and fact tables
 - Analytics marts for revenue, product performance, and delivery performance
 - SQL data quality checks
 - SQL interview practice queries
-- README screenshots for ingestion, dbt staging, dbt marts, and SQL outputs
+- README screenshots
+- Project story documentation
 
-### In Progress
+### Planned / Future Improvements
 
-- Metabase dashboard integration
-- More project documentation and interview notes
-
-### Planned
-
-- More custom dbt business tests
-- dbt source freshness checks
 - Metabase dashboard
+- More custom dbt business tests
 - Airflow orchestration
 - GitHub Actions CI/CD
 - AWS-ready architecture notes
 - SCD Type 2 snapshot
 - Incremental models
+- Intermediate dbt layer for more complex business logic
 
 ---
 
-## 3. Tech Stack
+## 4. Tech Stack
 
-| Category         | Tools                   |
-| ---------------- | ----------------------- |
-| Language         | Python 3.11             |
-| Database         | PostgreSQL              |
-| Data Processing  | pandas                  |
-| DB Access        | SQLAlchemy, psycopg2    |
-| Transformation   | dbt Core, dbt-postgres  |
-| Testing          | pytest, dbt tests       |
-| Containerization | Docker Compose          |
-| BI               | Metabase (planned)      |
-| Orchestration    | Airflow (planned)       |
-| CI/CD            | GitHub Actions (planned) |
+| Category | Tools |
+| --- | --- |
+| Language | Python 3.11 |
+| Database | PostgreSQL |
+| Data Processing | pandas |
+| DB Access | SQLAlchemy, psycopg2 |
+| Transformation | dbt Core, dbt-postgres |
+| Testing | pytest, dbt tests |
+| Containerization | Docker Compose |
+| BI | Metabase, planned |
+| Orchestration | Airflow, planned |
+| CI/CD | GitHub Actions, planned |
 
 ---
 
-## 4. Architecture
+## 5. Architecture
 
 ```text
 CSV Retail Dataset
@@ -105,20 +113,24 @@ dbt marts layer
         ↓
 Analytics-ready tables
         ↓
-SQL analysis / Metabase dashboard (planned)
+Metabase dashboard, planned
 ```
 
-The current MVP focuses on a clear batch ELT flow:
+Current scope:
 
 ```text
 raw → staging → marts
 ```
 
-Future versions will add orchestration, CI/CD, dashboarding, and AWS-ready design notes.
+Planned future scope:
+
+```text
+raw → staging → intermediate → marts → dashboard/orchestration/CI
+```
 
 ---
 
-## 5. Project Structure
+## 6. Project Structure
 
 ```text
 modern-retail-elt-warehouse/
@@ -165,15 +177,17 @@ modern-retail-elt-warehouse/
 │               └── schema.yml
 │
 ├── sql_practice/
-│   ├── 01_basic_select.sql
-│   ├── 02_joins.sql
-│   ├── 03_cte.sql
-│   ├── 04_window_functions.sql
-│   ├── 05_data_quality_checks.sql
-│   └── 06_business_analysis.sql
-│
 ├── screenshots/
 ├── docs/
+│   ├── architecture.md
+│   ├── data_model.md
+│   ├── data_quality.md
+│   ├── project_story.md
+│   └── tradeoffs.md
+│
+├── scripts/
+│   └── dbt.ps1
+│
 ├── docker-compose.yml
 ├── Makefile
 ├── requirements.txt
@@ -182,23 +196,23 @@ modern-retail-elt-warehouse/
 
 ---
 
-## 6. Data Ingestion Design
+## 7. Data Ingestion Design
 
 The ingestion layer loads raw retail CSV files into PostgreSQL raw tables.
 
 ### Current Features
 
-* Config-driven ingestion using `TABLE_CONFIG`
-* Multi-table loading support
-* Input file existence validation
-* Required column validation
-* Primary key null validation
-* Composite primary key validation for tables such as order items and payments
-* Column name normalization
-* Idempotent reload strategy using `TRUNCATE + INSERT`
-* Ingestion metadata tracking
-* Structured logging
-* Basic unit testing with pytest
+- Config-driven ingestion using `TABLE_CONFIG`
+- Multi-table loading support
+- Input file existence validation
+- Required column validation
+- Primary key null validation
+- Composite primary key validation for tables such as order items and payments
+- Column name normalization
+- Idempotent reload strategy using `TRUNCATE + INSERT`
+- Ingestion metadata tracking
+- Structured logging
+- Basic unit testing with pytest
 
 ### Ingestion Flow
 
@@ -222,15 +236,9 @@ record ingestion run metadata
 log success or failure
 ```
 
-### Idempotency Strategy
-
-The current MVP uses `TRUNCATE + INSERT` for raw table reloads. This keeps reruns deterministic and avoids duplicate appends when the same CSV file is loaded multiple times.
-
-This strategy is simple and appropriate for a local batch MVP. For larger datasets, a future version should use incremental loading based on source update timestamps or ingestion watermarks.
-
 ---
 
-## 7. Raw Tables
+## 8. Raw Tables
 
 Current raw tables:
 
@@ -259,20 +267,20 @@ ORDER BY started_at DESC;
 
 Tracked fields include:
 
-* run_id
-* source_name
-* target_table
-* row_count
-* status
-* started_at
-* finished_at
-* error_message
+- `run_id`
+- `source_name`
+- `target_table`
+- `row_count`
+- `status`
+- `started_at`
+- `finished_at`
+- `error_message`
 
 ---
 
-## 8. dbt Modeling Layers
+## 9. dbt Modeling Layers
 
-This project uses dbt to transform raw retail data into clean and analytics-ready models.
+This project uses dbt to transform raw retail data into clean staging models and analytics-ready marts.
 
 ### Staging Layer
 
@@ -291,12 +299,12 @@ stg_shipments
 
 Typical staging transformations:
 
-* select useful columns
-* rename columns consistently
-* cast dates and timestamps
-* cast numeric values
-* normalize text fields
-* prepare data for downstream marts
+- select useful columns;
+- rename columns consistently;
+- cast dates and timestamps;
+- cast numeric values;
+- normalize text fields;
+- prepare data for downstream marts.
 
 ### Marts Layer
 
@@ -319,152 +327,79 @@ mart_product_performance
 mart_delivery_performance
 ```
 
-### Current Modeling Scope
+### Planned Intermediate Layer
 
-The current MVP uses:
-
-```text
-raw → staging → marts
-```
-
-An intermediate layer is planned for future improvement when business logic becomes more complex.
+An intermediate layer is planned for future improvements when the project adds more complex business logic, such as customer retention, advanced delivery analysis, and more reusable metric definitions.
 
 ---
 
-## 9. Data Model
+## 10. Data Model
 
 ### Core Tables
 
-| Model            | Type      | Grain                   | Purpose                    |
-| ---------------- | --------- | ----------------------- | -------------------------- |
-| dim_customers    | Dimension | One row per customer_id | Customer attributes        |
-| dim_products     | Dimension | One row per product_id  | Product attributes         |
-| fact_orders      | Fact      | One row per order_id    | Order-level metrics        |
-| fact_order_items | Fact      | One row per order item  | Item-level revenue metrics |
+| Model | Type | Grain | Purpose |
+| --- | --- | --- | --- |
+| `dim_customers` | Dimension | One row per `customer_id` | Customer attributes |
+| `dim_products` | Dimension | One row per `product_id` | Product attributes |
+| `fact_orders` | Fact | One row per `order_id` | Order-level metrics |
+| `fact_order_items` | Fact | One row per order item | Item-level revenue metrics |
 
 ### Analytics Marts
 
-| Model                     | Grain                  | Key Metrics                                      |
-| ------------------------- | ---------------------- | ------------------------------------------------ |
-| mart_daily_revenue        | One row per order_date | total_orders, total_revenue, average_order_value |
-| mart_product_performance  | One row per product_id | total_quantity, total_orders, total_revenue      |
-| mart_delivery_performance | One row per order_id   | delivery_days, is_late_delivery                  |
-
-### Revenue Logic
-
-The current MVP calculates item-level gross revenue as:
-
-```text
-gross_revenue = item_price + freight_value
-```
-
-To avoid double counting revenue, order item metrics and payment metrics are aggregated at `order_id` grain before being joined into `fact_orders`.
+| Model | Grain | Key Metrics |
+| --- | --- | --- |
+| `mart_daily_revenue` | One row per `order_date` | `total_orders`, `total_revenue`, `average_order_value` |
+| `mart_product_performance` | One row per `product_id` | `total_quantity`, `total_orders`, `total_revenue` |
+| `mart_delivery_performance` | One row per `order_id` | `delivery_days`, `is_late_delivery` |
 
 ---
 
-## 10. Data Quality
+## 11. Data Quality
 
-Current data quality checks include Python-level validation, dbt tests, and manual SQL quality checks.
+Current data quality checks include Python-level validation, dbt tests, source freshness, and SQL data quality checks.
 
 ### Python Ingestion Validation
 
-* required columns exist
-* primary keys are not null
-* composite primary keys are valid
-* input files exist before loading
-* ingestion status is tracked in metadata table
+- required columns exist;
+- primary keys are not null;
+- composite primary keys are valid;
+- input files exist before loading;
+- ingestion status is tracked in metadata table.
 
 ### dbt Tests
 
 Current dbt tests include:
 
-* not_null tests
-* unique tests
-* relationships tests
-* accepted_values tests for selected fields
+- `not_null` tests;
+- `unique` tests;
+- `relationships` tests;
+- `accepted_values` tests for selected fields.
 
-Example dbt test command:
+Example command:
 
 ```bash
-cd dbt
-dbt test --profiles-dir .
+make dbt-test
 ```
 
-### Manual SQL Quality Checks
+### dbt Source Freshness
 
-Manual SQL checks are stored in:
+The project includes a source freshness check to help detect stale raw data.
 
-```text
-sql_practice/05_data_quality_checks.sql
+Example command:
+
+```bash
+make dbt-freshness
 ```
 
-They cover:
+### SQL Data Quality Checks
 
-- duplicate primary key checks
-- null value checks
-- orphan foreign key checks
-- negative revenue and payment checks
-- delivery date consistency checks
-- mart output sanity checks
+SQL checks are included for common data quality issues such as:
 
-## 11. SQL Practice and Data Quality Checks
-
-This project includes a dedicated SQL practice module covering analytical SQL patterns commonly used by Data Engineers and Data Analysts, along with data quality validation queries for the retail warehouse.
-
-```text
-sql_practice/
-├── 01_basic_select.sql
-├── 02_joins.sql
-├── 03_cte.sql
-├── 04_window_functions.sql
-├── 05_data_quality_checks.sql
-└── 06_business_analysis.sql
-```
-
-### Covered SQL Topics
-
-#### Basic SQL
-- Filtering and aggregation
-- Grouping and sorting
-- Revenue and order metrics
-
-#### Joins
-- Customer-to-order relationships
-- Order-to-product relationships
-- Payment and shipment enrichment
-- Multi-table retail analytics queries
-
-#### Common Table Expressions
-- Revenue analysis
-- Customer order summaries
-- Delivery performance calculations
-- Multi-step analytical transformations
-
-#### Window Functions
-- `ROW_NUMBER()`
-- `RANK()`
-- `LAG()`
-- Running totals
-- Revenue ranking by product and category
-- Customer order sequencing
-
-#### Data Quality Validation
-- Raw table row count validation
-- Duplicate primary key detection
-- Null value checks
-- Orphan foreign key checks
-- Negative revenue and payment checks
-- Referential integrity validation
-
-#### Business Analytics
-- Daily revenue trends
-- Product performance analysis
-- Order status distribution
-- Customer purchasing behavior
-- Delivery performance metrics
-- Revenue by product category
-
-These SQL exercises are designed to strengthen SQL fundamentals while validating warehouse data quality and supporting common business reporting use cases.
+- null keys;
+- duplicate keys;
+- orphan records;
+- invalid payment/revenue logic;
+- mart sanity checks.
 
 ---
 
@@ -494,13 +429,37 @@ make load
 make test
 ```
 
-### 5. Run dbt models
+### 5. Run dbt debug
 
 ```bash
-cd dbt
-dbt debug --profiles-dir .
-dbt run --profiles-dir .
-dbt test --profiles-dir .
+make dbt-debug
+```
+
+### 6. Run dbt staging models
+
+```bash
+make dbt-run-staging
+make dbt-test-staging
+```
+
+### 7. Run dbt marts
+
+```bash
+make dbt-run-marts
+make dbt-test-marts
+```
+
+### 8. Run dbt source freshness
+
+```bash
+make dbt-freshness
+```
+
+### 9. Run all dbt models and tests
+
+```bash
+make dbt-run
+make dbt-test
 ```
 
 ---
@@ -555,101 +514,105 @@ LIMIT 20;
 
 `mart_daily_revenue` helps answer:
 
-* How many orders were placed each day?
-* What was the daily revenue?
-* What was the average order value?
+- How many orders were placed each day?
+- What was the daily revenue?
+- What was the average order value?
 
 ### Product Performance Mart
 
 `mart_product_performance` helps answer:
 
-* Which products generated the most revenue?
-* Which product categories performed best?
-* How many order items were sold per product?
+- Which products generated the most revenue?
+- Which product categories performed best?
+- How many order items were sold per product?
 
 ### Delivery Performance Mart
 
 `mart_delivery_performance` helps answer:
 
-* Which orders were delivered late?
-* How many days did delivery take?
-* Which orders need delivery performance analysis?
+- Which orders were delivered late?
+- How many days did delivery take?
+- Which orders need delivery performance analysis?
 
 ---
 
 ## 15. Screenshots
 
-### Pipeline Screenshots
-
 ### Raw Layer
 
 #### Raw Table Counts
+
 ![Raw Table Counts](screenshots/raw_table_counts.png)
 
 #### Ingestion Run History
+
 ![Ingestion Runs](screenshots/ingestion_runs.png)
-
----
-
-### SQL Analytics & Data Quality
-
-#### Data Quality Checks
-Validation queries used to identify null values, duplicates, orphan records, and invalid business data.
-
-![SQL Quality Checks](screenshots/sql_quality_checks.png)
-
-#### Revenue Analysis by Day
-Daily revenue aggregation query used to analyze sales performance trends.
-
-![SQL Revenue by Day](screenshots/sql_revenue_by_day.png)
-
-#### Top Products Analysis
-SQL query used to identify best-selling products and product categories.
-
-![SQL Top Products](screenshots/sql_top_products.png)
-
-#### Customer Order Sequencing (Window Function)
-ROW_NUMBER() window function used to determine purchase sequence and identify repeat customers.
-
-![SQL Window Customer Order Number](screenshots/sql_window_customer_order_number.png)
 
 ---
 
 ### dbt Staging Layer
 
-#### dbt Debug
-![dbt Debug](screenshots/dbt_debug_pass.png)
-
 #### dbt Run Staging
+
 ![dbt Run Staging](screenshots/dbt_run_staging_pass.png)
 
 #### dbt Test Staging
-![dbt Test Staging](screenshots/dbt_test_staging_pass.png)
 
-#### Staging Table Counts
-![Staging Table Counts](screenshots/staging_table_counts.png)
+![dbt Test Staging](screenshots/dbt_test_staging_pass.png)
 
 ---
 
 ### dbt Marts Layer
 
 #### dbt Run Marts
+
 ![dbt Run Marts](screenshots/dbt_run_marts_pass.png)
 
 #### dbt Test Marts
+
 ![dbt Test Marts](screenshots/dbt_test_marts_pass.png)
 
 #### Marts Table Counts
+
 ![Marts Table Counts](screenshots/marts_table_counts.png)
 
 #### Daily Revenue Mart
+
 ![Mart Daily Revenue](screenshots/mart_daily_revenue.png)
 
 #### Product Performance Mart
+
 ![Mart Product Performance](screenshots/mart_product_performance.png)
 
 #### Delivery Performance Mart
+
 ![Mart Delivery Performance](screenshots/mart_delivery_performance.png)
+
+---
+
+### dbt Source Freshness
+
+![dbt Source Freshness](screenshots/dbt_source_freshness.png)
+
+---
+
+### SQL Data Quality and Analysis
+
+#### SQL Quality Checks
+
+![SQL Quality Checks](screenshots/sql_quality_checks.png)
+
+#### SQL Revenue by Day
+
+![SQL Revenue by Day](screenshots/sql_revenue_by_day.png)
+
+#### SQL Top Products
+
+![SQL Top Products](screenshots/sql_top_products.png)
+
+#### SQL Window Function Example
+
+![SQL Window Customer Order Number](screenshots/sql_window_customer_order_number.png)
 
 ---
 
@@ -657,35 +620,46 @@ ROW_NUMBER() window function used to determine purchase sequence and identify re
 
 This project currently implements:
 
-* Config-driven ingestion
-* Structured logging
-* Validation before loading
-* Idempotent reload strategy
-* Metadata tracking
-* Reproducible local PostgreSQL environment
-* Python unit tests
-* dbt transformation layers
-* dbt model tests
-* Basic dimensional modeling
-* Analytics-ready marts
-* Manual SQL data quality checks
-* SQL interview practice queries
+- config-driven ingestion;
+- structured logging;
+- validation before loading;
+- idempotent reload strategy;
+- metadata tracking;
+- reproducible local PostgreSQL environment;
+- Python unit tests;
+- dbt transformation layers;
+- dbt model tests;
+- dbt source freshness check;
+- SQL data quality checks;
+- basic dimensional modeling;
+- analytics-ready marts;
+- documentation and project storytelling.
 
 Planned engineering improvements:
 
-* Convert important SQL quality checks into dbt singular tests
-* Add more custom dbt business tests
-* Add dbt source freshness checks
-* SCD Type 2 snapshot
-* Incremental models
-* Airflow orchestration
-* GitHub Actions CI/CD
-* Metabase dashboard
-* AWS-ready deployment notes
+- Metabase dashboard;
+- more custom dbt business tests;
+- SCD Type 2 snapshot;
+- incremental models;
+- Airflow orchestration;
+- GitHub Actions CI/CD;
+- AWS-ready deployment notes.
 
 ---
 
-## 17. Interview Notes
+## 17. Documentation
+
+Project documentation:
+
+- [Architecture](docs/architecture.md)
+- [Data Model](docs/data_model.md)
+- [Data Quality Strategy](docs/data_quality.md)
+- [Project Story](docs/project_story.md)
+- [Trade-offs](docs/tradeoffs.md)
+
+---
+
+## 18. Interview Notes
 
 ### What does this project do?
 
@@ -693,13 +667,13 @@ This project builds a retail ELT warehouse that loads raw CSV data into PostgreS
 
 ### Why use dbt?
 
-dbt helps separate SQL transformations into clear layers, manage model dependencies with `ref()`, document data models, and apply data tests such as not_null, unique, relationships, and accepted_values.
+ dbt helps separate SQL transformations into clear layers, manage model dependencies with `ref()`, document data models, and apply data tests such as `not_null`, `unique`, `relationships`, and `accepted_values`.
 
 ### Why create marts?
 
 Marts are analytics-ready tables designed for business use cases. Instead of querying raw tables directly, marts provide clean and tested tables for reporting, dashboards, and analysis.
 
-### What is the grain of fact_orders?
+### What is the grain of `fact_orders`?
 
 The grain of `fact_orders` is one row per `order_id`.
 
@@ -707,17 +681,17 @@ The grain of `fact_orders` is one row per `order_id`.
 
 The project aggregates order item metrics and payment metrics by `order_id` before joining them into `fact_orders`. This prevents row multiplication when an order has multiple items or multiple payment records.
 
-### What SQL topics does this project demonstrate?
+### What is idempotent loading?
 
-The project includes SQL practice files for joins, CTEs, window functions, data quality checks, and business analysis queries such as daily revenue, product performance, delivery performance, and customer order sequencing.
+Idempotent loading means the pipeline can be rerun without unintentionally duplicating data. In this MVP, raw tables use a `TRUNCATE + INSERT` strategy, which is simple and appropriate for small batch CSV datasets.
 
-### What are the current limitations?
+### What is the current limitation?
 
-The current MVP does not yet include Airflow orchestration, GitHub Actions CI/CD, Metabase dashboards, AWS deployment notes, SCD Type 2 snapshots, or incremental models. These are planned future improvements.
+The current MVP does not yet include Metabase dashboard, Airflow orchestration, GitHub Actions CI/CD, AWS deployment, SCD Type 2 snapshots, or incremental models. These are planned future improvements.
 
 ---
 
-## 18. Roadmap
+## 19. Roadmap
 
 ### Phase 1 - Ingestion Foundation
 
@@ -725,58 +699,62 @@ Completed:
 
 - Python ingestion
 - PostgreSQL raw layer
-- Validation
-- Logging
-- Metadata tracking
-- Idempotent loading
-- Basic pytest coverage
+- validation
+- logging
+- metadata tracking
+- idempotent loading
+- basic pytest coverage
 
 ### Phase 2 - Warehouse Modeling
 
 Completed:
 
+- dbt sources
 - dbt staging models
 - dbt staging tests
+- dbt source freshness check
 - basic dbt marts
 - dimension and fact tables
 - analytics marts
-- SQL practice queries
-- SQL data quality checks
-- README screenshots
 
-### Phase 3 - Dashboard and Production Features
+### Phase 3 - SQL Quality and Portfolio Polish
+
+Completed:
+
+- SQL data quality checks
+- SQL interview practice queries
+- project screenshots
+- project story documentation
+- README polish
+
+### Phase 4 - Dashboard and Production Features
 
 Planned:
 
 - Metabase dashboard
-- additional dbt business tests
-- source freshness checks
 - Airflow DAG
 - GitHub Actions CI
-- AWS-ready architecture notes
+- advanced dbt tests
 - SCD Type 2 snapshot
 - incremental model
+- AWS-ready architecture notes
 
 ---
 
-## 19. Future Improvements
+## 20. Future Improvements
 
-- Add `dim_dates`
-- Add `dim_sellers`
-- Add customer retention mart
-- Add intermediate dbt models
-- Convert important SQL quality checks into dbt singular tests
-- Add more custom business tests
-- Add source freshness checks
-- Add SCD Type 2 snapshot for product dimension
-- Add incremental model for daily revenue
-- Build Metabase dashboard
-- Add Airflow orchestration
-- Add GitHub Actions CI/CD
-- Add AWS target architecture documentation
+- Add `dim_dates`.
+- Add customer retention mart.
+- Add more custom business tests.
+- Add SCD Type 2 snapshot for product dimension.
+- Add incremental model for daily revenue.
+- Build Metabase dashboard.
+- Add Airflow orchestration.
+- Add GitHub Actions CI/CD.
+- Add AWS target architecture documentation.
 
 ---
 
-## 20. Author
+## 21. Author
 
-Built as part of a Data Engineering portfolio project focused on production-style ELT workflows and analytics engineering.
+Built as part of a Data Engineering portfolio project focused on production-style ELT workflows, data quality, warehouse modeling, and analytics engineering.

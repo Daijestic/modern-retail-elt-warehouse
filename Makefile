@@ -26,27 +26,44 @@ test:
 sql:
 	docker exec -it retail_postgres psql -U retail_user -d retail_dw
 
+run-sql:
+	docker exec -i retail_postgres psql -U retail_user -d retail_dw < $(FILE)
+
+sql-practice:
+	docker exec -i retail_postgres psql -U retail_user -d retail_dw < sql_practice/01_basic_select.sql
+	docker exec -i retail_postgres psql -U retail_user -d retail_dw < sql_practice/02_joins.sql
+	docker exec -i retail_postgres psql -U retail_user -d retail_dw < sql_practice/03_cte.sql
+	docker exec -i retail_postgres psql -U retail_user -d retail_dw < sql_practice/04_window_functions.sql
+	docker exec -i retail_postgres psql -U retail_user -d retail_dw < sql_practice/05_data_quality_checks.sql
+	docker exec -i retail_postgres psql -U retail_user -d retail_dw < sql_practice/06_business_analysis.sql
+
 sample-data:
 	cp data/sample/customers.csv data/raw/customers.csv
 	cp data/sample/orders.csv data/raw/orders.csv
 
 dbt-debug:
-	dbt debug --project-dir dbt --profiles-dir dbt
+	powershell -ExecutionPolicy Bypass -File scripts/dbt.ps1 -Command debug
 
 dbt-run:
-	dbt run --project-dir dbt --profiles-dir dbt
-
-dbt-run-staging:
-	dbt run --project-dir dbt --profiles-dir dbt --select staging
+	powershell -ExecutionPolicy Bypass -File scripts/dbt.ps1 -Command run
 
 dbt-test:
-	dbt test --project-dir dbt --profiles-dir dbt
+	powershell -ExecutionPolicy Bypass -File scripts/dbt.ps1 -Command test
+
+dbt-run-staging:
+	powershell -ExecutionPolicy Bypass -File scripts/dbt.ps1 -Command run -Select staging
 
 dbt-test-staging:
-	dbt test --project-dir dbt --profiles-dir dbt --select staging
+	powershell -ExecutionPolicy Bypass -File scripts/dbt.ps1 -Command test -Select staging
+
+dbt-run-marts:
+	powershell -ExecutionPolicy Bypass -File scripts/dbt.ps1 -Command run -Select marts
+
+dbt-test-marts:
+	powershell -ExecutionPolicy Bypass -File scripts/dbt.ps1 -Command test -Select marts
 
 dbt-freshness:
-	dbt source freshness --project-dir dbt --profiles-dir dbt
-
+	powershell -ExecutionPolicy Bypass -File scripts/dbt.ps1 -Command freshness
+	
 dbt-docs:
 	dbt docs generate --project-dir dbt --profiles-dir dbt
