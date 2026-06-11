@@ -1,165 +1,89 @@
 # Trade-offs
 
-This document explains key design trade-offs in the current MVP.
+## 1. Vì sao dùng PostgreSQL thay vì cloud warehouse
 
-## 1. TRUNCATE + INSERT for Raw Ingestion
+PostgreSQL được chọn vì dễ chạy local bằng Docker Compose, không tốn cloud cost và tích hợp tốt với dbt-postgres.
+Với portfolio Intern/Fresher, PostgreSQL đủ để thể hiện SQL, warehouse layers, dbt modeling và data quality.
 
-### Current Decision
+Trade-off là PostgreSQL không tối ưu cho analytical workload rất lớn như BigQuery, Snowflake hoặc Redshift. Project hiện phù hợp MVP local hơn là production cloud warehouse.
 
-The ingestion pipeline currently uses:
+## 2. Vì sao dùng dbt thay vì viết toàn bộ SQL/Python thủ công
+
+dbt giúp tổ chức transformation theo model, quản lý dependency bằng `ref()`, định nghĩa tests gần model và hỗ trợ source freshness.
+Nếu viết toàn bộ SQL/Python thủ công, pipeline vẫn chạy được nhưng khó theo dõi lineage, khó test có hệ thống và khó mở rộng.
+
+Trade-off là dbt cần setup profile/database connection và yêu cầu discipline trong cách đặt tên model, schema và tests.
+
+## 3. Vì sao dùng `TRUNCATE + INSERT` cho MVP
+
+Nguồn dữ liệu hiện là CSV batch nhỏ, nên `TRUNCATE + INSERT` giúp rerun ingestion mà không append duplicate rows.
+Cách này đơn giản, deterministic và dễ debug khi đang xây dựng project portfolio.
+
+Flow hiện tại:
 
 ```text
 TRUNCATE raw table
-        ↓
-reload CSV
-        ↓
-record ingestion run
+-> INSERT latest CSV data
+-> record metadata.ingestion_runs
 ```
 
-### Why This Was Chosen
+## 4. Nhược điểm của `TRUNCATE + INSERT`
 
-This strategy is simple and suitable for the current MVP because:
+- Reload toàn bộ bảng dù chỉ thay đổi một phần nhỏ.
+- Không giữ row-level history trong raw table.
+- Không phù hợp cho dữ liệu lớn hoặc near-real-time ingestion.
+- Nếu load fail sau khi truncate, cần dựa vào rerun/source file để khôi phục dữ liệu.
+- Không phát hiện được thay đổi từng dòng như upsert/incremental strategy.
 
-- source data is small
-- CSV files are loaded in batch mode
-- rerunning the pipeline should not duplicate rows
-- implementation is easy to understand and test
+## 5. Khi nào nên chuyển sang incremental loading
 
-### Trade-off
+Nên chuyển sang incremental loading khi dữ liệu lớn hơn, source có timestamp/update marker rõ ràng, pipeline cần chạy thường xuyên hoặc business cần giữ lịch sử thay đổi.
 
-Advantages:
+Các hướng nâng cấp:
 
-- simple idempotency
-- easy to debug
-- avoids duplicate records after reruns
-- good for small batch datasets
+- Upsert/merge theo primary key.
+- Partition-based reload theo ngày.
+- Raw history table có `ingested_at` hoặc `batch_id`.
+- dbt incremental models cho analytics marts lớn.
 
-Limitations:
+## 6. Vì sao tách raw/staging/marts
 
-- not efficient for large datasets
-- does not preserve raw history
-- not suitable for near-real-time ingestion
-- cannot easily detect row-level changes
+- Raw layer giữ dữ liệu gần với nguồn để đối chiếu và debug.
+- Staging layer chuẩn hóa kiểu dữ liệu, tên cột và khóa kỹ thuật.
+- Marts layer chứa business logic, dimension/fact tables và bảng phục vụ analytics.
 
-### Future Improvement
+Cách tách layer giúp project dễ đọc, dễ test và dễ giải thích hơn so với query trực tiếp từ raw CSV tables.
 
-For larger datasets, this can be replaced with:
+## 7. Vì sao cần data quality checks nhiều lớp
 
-- incremental loading
-- upsert/merge strategy
-- partition-based reload
-- raw history table with ingestion timestamp
+Một lớp kiểm tra không đủ để bao phủ toàn bộ lỗi dữ liệu.
+Python validation giúp chặn lỗi schema/key trước khi load.
+dbt tests kiểm tra transformed models và relationships.
+SQL checks giúp điều tra các rule business hoặc sanity checks chưa tự động hóa.
 
----
+Cách tiếp cận nhiều lớp phù hợp với pipeline thực tế vì lỗi có thể xuất hiện ở source, ingestion, transformation hoặc aggregation.
 
-## 2. PostgreSQL as the Warehouse
+## 8. Giới hạn hiện tại của project
 
-### Current Decision
+- Chưa có Airflow orchestration.
+- Chưa có GitHub Actions CI/CD.
+- Chưa có dashboard BI hoàn chỉnh.
+- Chưa có incremental models.
+- Chưa có SCD Type 2.
+- Chưa có cloud deployment.
+- SQL data quality checks còn chạy thủ công.
+- Data model chưa có `dim_dates`, `dim_sellers` hoặc customer retention mart.
 
-PostgreSQL is used as the local warehouse.
+## 9. Hướng nâng cấp production
 
-### Why This Was Chosen
+Các nâng cấp hợp lý tiếp theo:
 
-PostgreSQL is suitable for this project because:
+- Airflow DAG để schedule ingestion, dbt run/test và freshness check.
+- GitHub Actions để chạy pytest và dbt checks khi mở pull request.
+- BI dashboard bằng Power BI hoặc Metabase dựa trên analytics marts.
+- Incremental loading và dbt incremental models cho dữ liệu lớn.
+- SCD Type 2 cho dimension cần tracking lịch sử.
+- AWS-ready architecture với S3, RDS/Redshift/Athena và secrets management.
+- Convert SQL quality checks quan trọng thành dbt singular tests.
 
-- easy to run locally with Docker
-- supports SQL analytics
-- works well with dbt
-- familiar for intern/fresher-level Data Engineering projects
-
-### Trade-off
-
-Advantages:
-
-- simple local setup
-- low cost
-- good SQL support
-- easy to demonstrate
-
-Limitations:
-
-- not designed for very large analytical workloads
-- less scalable than cloud warehouses such as BigQuery, Snowflake, or Redshift
-
-### Future Improvement
-
-Possible production targets:
-
-- Amazon Redshift
-- BigQuery
-- Snowflake
-- AWS Athena over S3
-
----
-
-## 3. dbt for Transformations
-
-### Current Decision
-
-dbt is used for SQL transformations from raw data to staging and marts.
-
-### Why This Was Chosen
-
-dbt is suitable because:
-
-- SQL transformations are easy to review
-- model dependencies are managed with `ref()`
-- tests can be defined close to models
-- documentation and lineage can be generated
-
-### Trade-off
-
-Advantages:
-
-- clear transformation layers
-- good testing support
-- good analytics engineering practice
-
-Limitations:
-
-- requires SQL discipline
-- not ideal for complex Python-based transformations
-- needs a warehouse connection to run
-
----
-
-## 4. Basic Marts Before Airflow
-
-### Current Decision
-
-The project builds dbt staging and marts before adding Airflow.
-
-### Why This Was Chosen
-
-The priority is to first build a working ELT warehouse:
-
-```text
-ingestion
-        ↓
-raw tables
-        ↓
-staging models
-        ↓
-marts
-```
-
-Airflow should orchestrate a pipeline that already works manually.
-
-### Trade-off
-
-Advantages:
-
-- faster MVP
-- easier debugging
-- better for interview preparation
-- avoids adding orchestration too early
-
-Limitations:
-
-- pipeline is still manually triggered
-- no scheduling yet
-- no retry policy yet
-
-### Future Improvement
-
-Add Airflow DAG after marts and data quality checks are stable.
+Những phần này hiện được xem là Future Improvements, chưa phải tính năng đã hoàn thành.

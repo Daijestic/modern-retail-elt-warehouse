@@ -1,760 +1,296 @@
 # Modern Retail ELT Warehouse
 
-Production-style retail ELT warehouse built with **Python, PostgreSQL, Docker Compose, and dbt Core**.
+## 1. Giới thiệu
 
-This project focuses on building a reliable batch ELT pipeline for retail analytics, including raw data ingestion, validation, idempotent loading, ingestion tracking, dbt staging models, dbt marts, dbt tests, source freshness checks, SQL data quality checks, and analytics-ready tables for revenue, product, and delivery reporting.
+Modern Retail ELT Warehouse là project portfolio Data Engineering mô phỏng một ELT data warehouse cho dữ liệu bán lẻ dạng CSV.
+Project tập trung vào ingestion bằng Python, lưu dữ liệu raw trong PostgreSQL và transform bằng dbt Core.
+Các bảng analytics-ready phục vụ phân tích doanh thu, sản phẩm và giao hàng.
 
----
+Mục tiêu chính là thể hiện tư duy xây dựng pipeline có validation, metadata tracking, data quality checks và mô hình dữ liệu rõ ràng.
+Nội dung được viết theo hướng phù hợp cho vị trí Data Engineer Intern/Fresher.
 
-## 1. Business Problem
+## 2. Bài toán
 
-Retail teams need reliable analytics for revenue, customer behavior, product performance, and delivery operations. However, raw operational data is often inconsistent, duplicated, missing required fields, or difficult to query directly for business reporting.
+Dữ liệu bán lẻ ở dạng CSV thô gây khó khăn cho phân tích doanh thu, hiệu suất sản phẩm và giao hàng.
+Project xây dựng ELT warehouse để biến dữ liệu thô thành các bảng analytics-ready có kiểm soát chất lượng dữ liệu.
 
-This project builds a modern ELT warehouse that:
+Warehouse này giúp chuẩn hóa dữ liệu, tách rõ raw/staging/marts layer, kiểm tra lỗi phổ biến và chuẩn bị nền tảng cho dashboard hoặc orchestration trong tương lai.
 
-- ingests raw retail CSV data into PostgreSQL;
-- validates required columns and primary keys before loading;
-- tracks every ingestion run with row counts, status, timestamps, and error messages;
-- transforms raw data into clean dbt staging models;
-- builds analytics-ready marts for revenue, product, and delivery analysis;
-- applies dbt tests and SQL checks to improve data reliability;
-- prepares the warehouse foundation for future dashboarding, orchestration, CI/CD, and cloud deployment.
+## 3. Kiến trúc tổng quan
 
----
+```text
+CSV Files
+-> Python Ingestion
+-> PostgreSQL Raw Layer
+-> dbt Staging
+-> dbt Core Marts
+-> dbt Analytics Marts
+-> Data Quality Checks
+-> Dashboard-ready Tables
+```
 
-## 2. Project Highlights
-
-- Built a batch ELT warehouse for CSV-based retail data.
-- Implemented a config-driven Python ingestion pipeline.
-- Added required column validation, primary key validation, composite key validation, and column normalization.
-- Used an idempotent reload strategy with `TRUNCATE + INSERT` for raw tables.
-- Tracked ingestion history in `metadata.ingestion_runs`.
-- Built dbt staging models, core dimension/fact tables, and analytics marts.
-- Added dbt tests, source freshness checks, and SQL data quality checks.
-- Documented architecture, data model, data quality strategy, trade-offs, screenshots, and project story.
-
----
-
-## 3. Current Project Status
-
-### Completed
-
-- Python ingestion pipeline
-- PostgreSQL raw schema
-- Config-driven multi-table loading
-- Required column validation
-- Primary key null validation
-- Composite primary key validation
-- Column name normalization
-- Idempotent reload strategy using `TRUNCATE + INSERT`
-- Ingestion run tracking
-- Structured logging
-- Basic pytest coverage
-- Dockerized local PostgreSQL environment
-- dbt project setup
-- dbt raw sources
-- dbt staging models
-- dbt staging tests
-- dbt source freshness check
-- Basic dbt marts
-- Core dimension and fact tables
-- Analytics marts for revenue, product performance, and delivery performance
-- SQL data quality checks
-- SQL interview practice queries
-- README screenshots
-- Project story documentation
-
-### Planned / Future Improvements
-
-- Metabase dashboard
-- More custom dbt business tests
-- Airflow orchestration
-- GitHub Actions CI/CD
-- AWS-ready architecture notes
-- SCD Type 2 snapshot
-- Incremental models
-- Intermediate dbt layer for more complex business logic
-
----
+- `CSV Files`: dữ liệu nguồn nằm trong `data/raw/`.
+- `Python Ingestion`: đọc CSV bằng pandas, validate schema/primary key, normalize tên cột và load vào PostgreSQL.
+- `PostgreSQL Raw Layer`: lưu dữ liệu gần với nguồn trong schema `raw`.
+- `metadata.ingestion_runs`: ghi nhận mỗi lần chạy ingestion, gồm trạng thái, số dòng, thời gian và lỗi nếu có.
+- `dbt Staging`: chuẩn hóa kiểu dữ liệu, timestamp, text field và khóa kỹ thuật.
+- `dbt Core Marts`: tạo dimension table và fact table.
+- `dbt Analytics Marts`: tạo bảng phân tích doanh thu, sản phẩm và giao hàng.
+- `Data Quality Checks`: gồm Python validation, dbt tests/source freshness và SQL checks.
 
 ## 4. Tech Stack
 
-| Category | Tools |
-| --- | --- |
-| Language | Python 3.11 |
-| Database | PostgreSQL |
-| Data Processing | pandas |
-| DB Access | SQLAlchemy, psycopg2 |
-| Transformation | dbt Core, dbt-postgres |
-| Testing | pytest, dbt tests |
-| Containerization | Docker Compose |
-| BI | Metabase, planned |
-| Orchestration | Airflow, planned |
-| CI/CD | GitHub Actions, planned |
+| Layer/Component | Tool | Vai trò trong project |
+| --- | --- | --- |
+| Ingestion | Python, pandas, SQLAlchemy | Đọc CSV, validate dữ liệu và load vào PostgreSQL |
+| Database | PostgreSQL, Docker Compose | Chạy local database, lưu raw layer và metadata |
+| Transformation | dbt Core, dbt-postgres | Xây dựng staging models, core marts và analytics marts |
+| Data Quality | Python validation, dbt tests, SQL checks, pytest | Kiểm tra dữ liệu ở nhiều lớp |
+| Local Environment | Docker Compose, Makefile | Khởi động database và chạy các command lặp lại |
+| Documentation | Markdown, screenshots | Ghi lại kiến trúc, data model, data quality và kết quả chạy |
 
----
+## 5. Tính năng đã hoàn thành
 
-## 5. Architecture
+**Ingestion**
 
-```text
-CSV Retail Dataset
-        ↓
-Python ingestion pipeline
-        ↓
-Validation and column normalization
-        ↓
-PostgreSQL raw layer
-        ↓
-Ingestion metadata tracking
-        ↓
-dbt staging layer
-        ↓
-dbt marts layer
-        ↓
-Analytics-ready tables
-        ↓
-Metabase dashboard, planned
-```
+- Config-driven ingestion bằng `ingestion/table_config.py`.
+- Load nhiều CSV: customers, orders, order_items, products, payments, shipments.
+- Validate file tồn tại, required columns và primary key/composite key không null.
+- Normalize tên cột về dạng lowercase/trim.
+- Xử lý duplicate theo primary key bằng cách giữ bản ghi cuối cùng trước khi load.
+- Idempotent loading bằng `TRUNCATE + INSERT`.
+- Structured logging và ghi metadata vào `metadata.ingestion_runs`.
 
-Current scope:
+**Database/raw layer**
 
-```text
-raw → staging → marts
-```
+- Docker Compose PostgreSQL local.
+- Schema `raw` cho raw tables.
+- Schema `metadata` cho ingestion run tracking.
+- Raw tables có primary key hoặc composite primary key theo `db/init.sql`.
 
-Planned future scope:
+**dbt modeling**
 
-```text
-raw → staging → intermediate → marts → dashboard/orchestration/CI
-```
+- Source definitions cho raw tables trong `dbt/models/sources.yml`.
+- Staging models: `stg_customers`, `stg_orders`, `stg_order_items`, `stg_products`, `stg_payments`, `stg_shipments`.
+- Core marts: `dim_customers`, `dim_products`, `fact_orders`, `fact_order_items`.
+- Analytics marts: `mart_daily_revenue`, `mart_product_performance`, `mart_delivery_performance`.
 
----
+**Data quality**
 
-## 6. Project Structure
+- Python validation trước khi load.
+- dbt tests: `not_null`, `unique`, `relationships`, `accepted_values`.
+- dbt source freshness dựa trên `ingested_at`.
+- SQL checks cho null, duplicate, orphan records, negative values và logic giao hàng/doanh thu.
+
+**Testing**
+
+- pytest cho ingestion validators và table config.
+- Makefile có command chạy pytest và dbt commands.
+
+**Documentation**
+
+- README và tài liệu chi tiết trong `docs/`.
+- Screenshots kết quả ingestion, dbt run/test, source freshness, marts và SQL checks trong `screenshots/`.
+
+## 6. Cấu trúc thư mục
 
 ```text
 modern-retail-elt-warehouse/
-│
-├── ingestion/
-│   ├── load_csv_to_postgres.py
-│   ├── validators.py
-│   ├── config.py
-│   ├── db.py
-│   ├── logger.py
-│   └── table_config.py
-│
-├── tests/
-│   ├── test_validators.py
-│   ├── test_config.py
-│   └── test_load_csv.py
-│
-├── dbt/
-│   ├── dbt_project.yml
-│   ├── profiles.yml
-│   └── models/
-│       ├── staging/
-│       │   ├── sources.yml
-│       │   ├── schema.yml
-│       │   ├── stg_customers.sql
-│       │   ├── stg_orders.sql
-│       │   ├── stg_order_items.sql
-│       │   ├── stg_products.sql
-│       │   ├── stg_payments.sql
-│       │   └── stg_shipments.sql
-│       │
-│       └── marts/
-│           ├── core/
-│           │   ├── dim_customers.sql
-│           │   ├── dim_products.sql
-│           │   ├── fact_orders.sql
-│           │   ├── fact_order_items.sql
-│           │   └── schema.yml
-│           │
-│           └── analytics/
-│               ├── mart_daily_revenue.sql
-│               ├── mart_product_performance.sql
-│               ├── mart_delivery_performance.sql
-│               └── schema.yml
-│
-├── sql_practice/
-├── screenshots/
-├── docs/
-│   ├── architecture.md
-│   ├── data_model.md
-│   ├── data_quality.md
-│   ├── project_story.md
-│   └── tradeoffs.md
-│
-├── scripts/
-│   └── dbt.ps1
-│
-├── docker-compose.yml
-├── Makefile
-├── requirements.txt
-└── README.md
+|-- data/
+|   |-- raw/
+|   |-- sample/
+|-- db/
+|   |-- init.sql
+|-- dbt/
+|   |-- dbt_project.yml
+|   |-- profiles.yml
+|   |-- macros/
+|   |-- models/
+|       |-- sources.yml
+|       |-- staging/
+|       |-- marts/
+|           |-- core/
+|           |-- analytics/
+|-- docs/
+|   |-- architecture.md
+|   |-- data_model.md
+|   |-- data_quality.md
+|   |-- project_story.md
+|   |-- tradeoffs.md
+|-- ingestion/
+|   |-- config.py
+|   |-- db.py
+|   |-- load_csv_to_postgres.py
+|   |-- logger.py
+|   |-- table_config.py
+|   |-- validators.py
+|-- screenshots/
+|-- scripts/
+|   |-- dbt.ps1
+|-- sql_practice/
+|-- tests/
+|-- docker-compose.yml
+|-- Makefile
+|-- requirements.txt
+|-- README.md
 ```
 
----
+## 7. Cách chạy local
 
-## 7. Data Ingestion Design
-
-The ingestion layer loads raw retail CSV files into PostgreSQL raw tables.
-
-### Current Features
-
-- Config-driven ingestion using `TABLE_CONFIG`
-- Multi-table loading support
-- Input file existence validation
-- Required column validation
-- Primary key null validation
-- Composite primary key validation for tables such as order items and payments
-- Column name normalization
-- Idempotent reload strategy using `TRUNCATE + INSERT`
-- Ingestion metadata tracking
-- Structured logging
-- Basic unit testing with pytest
-
-### Ingestion Flow
-
-```text
-validate input file exists
-        ↓
-read CSV with pandas
-        ↓
-validate required columns
-        ↓
-normalize column names
-        ↓
-validate primary keys
-        ↓
-truncate target table
-        ↓
-batch insert into PostgreSQL
-        ↓
-record ingestion run metadata
-        ↓
-log success or failure
-```
-
----
-
-## 8. Raw Tables
-
-Current raw tables:
-
-```text
-raw.raw_customers
-raw.raw_orders
-raw.raw_order_items
-raw.raw_products
-raw.raw_payments
-raw.raw_shipments
-```
-
-Metadata table:
-
-```text
-metadata.ingestion_runs
-```
-
-### Example Ingestion Metadata Query
-
-```sql
-SELECT *
-FROM metadata.ingestion_runs
-ORDER BY started_at DESC;
-```
-
-Tracked fields include:
-
-- `run_id`
-- `source_name`
-- `target_table`
-- `row_count`
-- `status`
-- `started_at`
-- `finished_at`
-- `error_message`
-
----
-
-## 9. dbt Modeling Layers
-
-This project uses dbt to transform raw retail data into clean staging models and analytics-ready marts.
-
-### Staging Layer
-
-Staging models clean and standardize raw data.
-
-Current staging models:
-
-```text
-stg_customers
-stg_orders
-stg_order_items
-stg_products
-stg_payments
-stg_shipments
-```
-
-Typical staging transformations:
-
-- select useful columns;
-- rename columns consistently;
-- cast dates and timestamps;
-- cast numeric values;
-- normalize text fields;
-- prepare data for downstream marts.
-
-### Marts Layer
-
-The marts layer contains business-ready dimension, fact, and analytics tables.
-
-Core models:
-
-```text
-dim_customers
-dim_products
-fact_orders
-fact_order_items
-```
-
-Analytics models:
-
-```text
-mart_daily_revenue
-mart_product_performance
-mart_delivery_performance
-```
-
-### Planned Intermediate Layer
-
-An intermediate layer is planned for future improvements when the project adds more complex business logic, such as customer retention, advanced delivery analysis, and more reusable metric definitions.
-
----
-
-## 10. Data Model
-
-### Core Tables
-
-| Model | Type | Grain | Purpose |
-| --- | --- | --- | --- |
-| `dim_customers` | Dimension | One row per `customer_id` | Customer attributes |
-| `dim_products` | Dimension | One row per `product_id` | Product attributes |
-| `fact_orders` | Fact | One row per `order_id` | Order-level metrics |
-| `fact_order_items` | Fact | One row per order item | Item-level revenue metrics |
-
-### Analytics Marts
-
-| Model | Grain | Key Metrics |
-| --- | --- | --- |
-| `mart_daily_revenue` | One row per `order_date` | `total_orders`, `total_revenue`, `average_order_value` |
-| `mart_product_performance` | One row per `product_id` | `total_quantity`, `total_orders`, `total_revenue` |
-| `mart_delivery_performance` | One row per `order_id` | `delivery_days`, `is_late_delivery` |
-
----
-
-## 11. Data Quality
-
-Current data quality checks include Python-level validation, dbt tests, source freshness, and SQL data quality checks.
-
-### Python Ingestion Validation
-
-- required columns exist;
-- primary keys are not null;
-- composite primary keys are valid;
-- input files exist before loading;
-- ingestion status is tracked in metadata table.
-
-### dbt Tests
-
-Current dbt tests include:
-
-- `not_null` tests;
-- `unique` tests;
-- `relationships` tests;
-- `accepted_values` tests for selected fields.
-
-Example command:
+### 1. Clone repo
 
 ```bash
-make dbt-test
+git clone <repo-url>
+cd modern-retail-elt-warehouse
 ```
 
-### dbt Source Freshness
-
-The project includes a source freshness check to help detect stale raw data.
-
-Example command:
+### 2. Tạo `.env` từ `.env.example`
 
 ```bash
-make dbt-freshness
+cp .env.example .env
 ```
 
-### SQL Data Quality Checks
+Trên Windows PowerShell:
 
-SQL checks are included for common data quality issues such as:
+```powershell
+Copy-Item .env.example .env
+```
 
-- null keys;
-- duplicate keys;
-- orphan records;
-- invalid payment/revenue logic;
-- mart sanity checks.
-
----
-
-## 12. How to Run Locally
-
-### 1. Start PostgreSQL
+### 3. Khởi động PostgreSQL bằng Docker
 
 ```bash
 make up
 ```
 
-### 2. Install dependencies
+### 4. Cài dependencies
 
 ```bash
 make install
 ```
 
-### 3. Run ingestion pipeline
+### 5. Chạy ingestion
 
 ```bash
 make load
 ```
 
-### 4. Run Python tests
+### 6. Chạy pytest
 
 ```bash
 make test
 ```
 
-### 5. Run dbt debug
+### 7. Chạy dbt
 
 ```bash
 make dbt-debug
+make dbt-run
+make dbt-test
+make dbt-freshness
 ```
 
-### 6. Run dbt staging models
+Có thể chạy riêng staging hoặc marts:
 
 ```bash
 make dbt-run-staging
 make dbt-test-staging
-```
-
-### 7. Run dbt marts
-
-```bash
 make dbt-run-marts
 make dbt-test-marts
 ```
 
-### 8. Run dbt source freshness
+### 8. Chạy SQL quality checks
 
 ```bash
-make dbt-freshness
+make run-sql FILE=sql_practice/05_data_quality_checks.sql
 ```
 
-### 9. Run all dbt models and tests
+## 8. Data Model
 
-```bash
-make dbt-run
-make dbt-test
-```
+**Raw tables**
 
----
+- `raw.raw_customers`
+- `raw.raw_orders`
+- `raw.raw_order_items`
+- `raw.raw_products`
+- `raw.raw_payments`
+- `raw.raw_shipments`
 
-## 13. Validate Loaded Data
+**Staging models**
 
-### Raw Table Counts
+- `stg_customers`
+- `stg_orders`
+- `stg_order_items`
+- `stg_products`
+- `stg_payments`
+- `stg_shipments`
 
-```sql
-SELECT COUNT(*) FROM raw.raw_customers;
-SELECT COUNT(*) FROM raw.raw_orders;
-SELECT COUNT(*) FROM raw.raw_order_items;
-SELECT COUNT(*) FROM raw.raw_products;
-SELECT COUNT(*) FROM raw.raw_payments;
-SELECT COUNT(*) FROM raw.raw_shipments;
-```
+**Core marts**
 
-### Ingestion Runs
+- Dimension tables: `dim_customers`, `dim_products`
+- Fact tables: `fact_orders`, `fact_order_items`
 
-```sql
-SELECT *
-FROM metadata.ingestion_runs
-ORDER BY started_at DESC;
-```
+**Analytics marts**
 
-### Analytics Mart Checks
+- `mart_daily_revenue`
+- `mart_product_performance`
+- `mart_delivery_performance`
 
-Depending on the dbt target schema, replace `marts` with your actual dbt schema if needed.
+Chi tiết grain, business logic và assumptions được mô tả trong [docs/data_model.md](docs/data_model.md).
 
-```sql
-SELECT *
-FROM marts.mart_daily_revenue
-ORDER BY order_date
-LIMIT 20;
+## 9. Data Quality Strategy
 
-SELECT *
-FROM marts.mart_product_performance
-ORDER BY total_revenue DESC
-LIMIT 20;
+Project áp dụng data quality ở 3 lớp:
 
-SELECT *
-FROM marts.mart_delivery_performance
-ORDER BY delivery_days DESC NULLS LAST
-LIMIT 20;
-```
+- **Python validation trước khi load**: kiểm tra file tồn tại, required columns, primary key/composite key không null, normalize column names và duplicate handling.
+- **dbt tests sau transformation**: kiểm tra `not_null`, `unique`, `relationships`, `accepted_values` và source freshness.
+- **SQL quality checks**: phát hiện null keys, duplicate records, orphan records, negative values và logic lỗi như delivery date trước purchase date.
 
----
+Chi tiết nằm trong [docs/data_quality.md](docs/data_quality.md).
 
-## 14. Analytics Outputs
+## 10. Kết quả analytics
 
-### Daily Revenue Mart
+Các marts chính:
 
-`mart_daily_revenue` helps answer:
+- `mart_daily_revenue`: doanh thu, số đơn hàng và average order value theo ngày.
+- `mart_product_performance`: số lượng bán, số đơn hàng, doanh thu sản phẩm và category.
+- `mart_delivery_performance`: delivery days, late delivery flag và trạng thái giao hàng.
 
-- How many orders were placed each day?
-- What was the daily revenue?
-- What was the average order value?
+Screenshots:
 
-### Product Performance Mart
+- ![Daily Revenue Mart](screenshots/mart_daily_revenue.png)
+- ![Product Performance Mart](screenshots/mart_product_performance.png)
+- ![Delivery Performance Mart](screenshots/mart_delivery_performance.png)
+- ![dbt Source Freshness](screenshots/dbt_source_freshness.png)
+- ![SQL Quality Checks](screenshots/sql_quality_checks.png)
 
-`mart_product_performance` helps answer:
+## 11. Điều đã học được
 
-- Which products generated the most revenue?
-- Which product categories performed best?
-- How many order items were sold per product?
+- Thiết kế ELT pipeline từ CSV đến warehouse layer.
+- Quản lý raw, staging và marts layer bằng PostgreSQL và dbt.
+- Viết ingestion pipeline có validation, logging và idempotency.
+- Tracking pipeline runs bằng `metadata.ingestion_runs`.
+- Modeling fact table và dimension table ở mức cơ bản.
+- Dùng dbt tests, source freshness và SQL checks để kiểm soát data quality.
+- Viết tài liệu kỹ thuật rõ ràng để giải thích project trong phỏng vấn.
 
-### Delivery Performance Mart
+## 12. Future Improvements
 
-`mart_delivery_performance` helps answer:
+- Airflow orchestration cho scheduling, retry và dependency management.
+- GitHub Actions CI/CD để chạy pytest, dbt compile/test tự động.
+- Dashboard BI hoàn chỉnh bằng Power BI hoặc Metabase.
+- Incremental model cho các bảng/marts lớn hơn.
+- SCD Type 2 cho dimension cần theo dõi lịch sử thay đổi.
+- AWS-ready architecture với S3, RDS/Redshift/Athena và secrets management.
+- Thêm `dim_dates`, `dim_sellers` và customer retention mart nếu mở rộng dataset.
 
-- Which orders were delivered late?
-- How many days did delivery take?
-- Which orders need delivery performance analysis?
-
----
-
-## 15. Screenshots
-
-### Raw Layer
-
-#### Raw Table Counts
-
-![Raw Table Counts](screenshots/raw_table_counts.png)
-
-#### Ingestion Run History
-
-![Ingestion Runs](screenshots/ingestion_runs.png)
-
----
-
-### dbt Staging Layer
-
-#### dbt Run Staging
-
-![dbt Run Staging](screenshots/dbt_run_staging_pass.png)
-
-#### dbt Test Staging
-
-![dbt Test Staging](screenshots/dbt_test_staging_pass.png)
-
----
-
-### dbt Marts Layer
-
-#### dbt Run Marts
-
-![dbt Run Marts](screenshots/dbt_run_marts_pass.png)
-
-#### dbt Test Marts
-
-![dbt Test Marts](screenshots/dbt_test_marts_pass.png)
-
-#### Marts Table Counts
-
-![Marts Table Counts](screenshots/marts_table_counts.png)
-
-#### Daily Revenue Mart
-
-![Mart Daily Revenue](screenshots/mart_daily_revenue.png)
-
-#### Product Performance Mart
-
-![Mart Product Performance](screenshots/mart_product_performance.png)
-
-#### Delivery Performance Mart
-
-![Mart Delivery Performance](screenshots/mart_delivery_performance.png)
-
----
-
-### dbt Source Freshness
-
-![dbt Source Freshness](screenshots/dbt_source_freshness.png)
-
----
-
-### SQL Data Quality and Analysis
-
-#### SQL Quality Checks
-
-![SQL Quality Checks](screenshots/sql_quality_checks.png)
-
-#### SQL Revenue by Day
-
-![SQL Revenue by Day](screenshots/sql_revenue_by_day.png)
-
-#### SQL Top Products
-
-![SQL Top Products](screenshots/sql_top_products.png)
-
-#### SQL Window Function Example
-
-![SQL Window Customer Order Number](screenshots/sql_window_customer_order_number.png)
-
----
-
-## 16. Engineering Practices
-
-This project currently implements:
-
-- config-driven ingestion;
-- structured logging;
-- validation before loading;
-- idempotent reload strategy;
-- metadata tracking;
-- reproducible local PostgreSQL environment;
-- Python unit tests;
-- dbt transformation layers;
-- dbt model tests;
-- dbt source freshness check;
-- SQL data quality checks;
-- basic dimensional modeling;
-- analytics-ready marts;
-- documentation and project storytelling.
-
-Planned engineering improvements:
-
-- Metabase dashboard;
-- more custom dbt business tests;
-- SCD Type 2 snapshot;
-- incremental models;
-- Airflow orchestration;
-- GitHub Actions CI/CD;
-- AWS-ready deployment notes.
-
----
-
-## 17. Documentation
-
-Project documentation:
+## 13. Tài liệu chi tiết
 
 - [Architecture](docs/architecture.md)
 - [Data Model](docs/data_model.md)
-- [Data Quality Strategy](docs/data_quality.md)
-- [Project Story](docs/project_story.md)
+- [Data Quality](docs/data_quality.md)
 - [Trade-offs](docs/tradeoffs.md)
+- [Project Story](docs/project_story.md)
 
----
+## 14. Tác giả
 
-## 18. Interview Notes
-
-### What does this project do?
-
-This project builds a retail ELT warehouse that loads raw CSV data into PostgreSQL, validates data before loading, tracks ingestion runs, and uses dbt to transform raw data into clean staging models and analytics-ready marts for revenue, product, and delivery analysis.
-
-### Why use dbt?
-
- dbt helps separate SQL transformations into clear layers, manage model dependencies with `ref()`, document data models, and apply data tests such as `not_null`, `unique`, `relationships`, and `accepted_values`.
-
-### Why create marts?
-
-Marts are analytics-ready tables designed for business use cases. Instead of querying raw tables directly, marts provide clean and tested tables for reporting, dashboards, and analysis.
-
-### What is the grain of `fact_orders`?
-
-The grain of `fact_orders` is one row per `order_id`.
-
-### How does the project avoid double counting revenue?
-
-The project aggregates order item metrics and payment metrics by `order_id` before joining them into `fact_orders`. This prevents row multiplication when an order has multiple items or multiple payment records.
-
-### What is idempotent loading?
-
-Idempotent loading means the pipeline can be rerun without unintentionally duplicating data. In this MVP, raw tables use a `TRUNCATE + INSERT` strategy, which is simple and appropriate for small batch CSV datasets.
-
-### What is the current limitation?
-
-The current MVP does not yet include Metabase dashboard, Airflow orchestration, GitHub Actions CI/CD, AWS deployment, SCD Type 2 snapshots, or incremental models. These are planned future improvements.
-
----
-
-## 19. Roadmap
-
-### Phase 1 - Ingestion Foundation
-
-Completed:
-
-- Python ingestion
-- PostgreSQL raw layer
-- validation
-- logging
-- metadata tracking
-- idempotent loading
-- basic pytest coverage
-
-### Phase 2 - Warehouse Modeling
-
-Completed:
-
-- dbt sources
-- dbt staging models
-- dbt staging tests
-- dbt source freshness check
-- basic dbt marts
-- dimension and fact tables
-- analytics marts
-
-### Phase 3 - SQL Quality and Portfolio Polish
-
-Completed:
-
-- SQL data quality checks
-- SQL interview practice queries
-- project screenshots
-- project story documentation
-- README polish
-
-### Phase 4 - Dashboard and Production Features
-
-Planned:
-
-- Metabase dashboard
-- Airflow DAG
-- GitHub Actions CI
-- advanced dbt tests
-- SCD Type 2 snapshot
-- incremental model
-- AWS-ready architecture notes
-
----
-
-## 20. Future Improvements
-
-- Add `dim_dates`.
-- Add customer retention mart.
-- Add more custom business tests.
-- Add SCD Type 2 snapshot for product dimension.
-- Add incremental model for daily revenue.
-- Build Metabase dashboard.
-- Add Airflow orchestration.
-- Add GitHub Actions CI/CD.
-- Add AWS target architecture documentation.
-
----
-
-## 21. Author
-
-Built as part of a Data Engineering portfolio project focused on production-style ELT workflows, data quality, warehouse modeling, and analytics engineering.
+Project được xây dựng bởi Bùi Đức Đại nhằm rèn luyện kỹ năng Data Engineering thực tế và chuẩn bị ứng tuyển Data Engineer Intern/Fresher.

@@ -1,76 +1,82 @@
-# Project Story - Modern Retail ELT Warehouse
+# Project Story
 
-## 1. Short Introduction
+## 1. Tóm tắt ngắn
 
-Modern Retail ELT Warehouse is a portfolio project that simulates a batch ELT data pipeline for retail analytics.
+Modern Retail ELT Warehouse là project portfolio mô phỏng một batch ELT pipeline cho dữ liệu bán lẻ.
+Project load CSV vào PostgreSQL raw layer, ghi nhận ingestion metadata, transform bằng dbt và tạo analytics marts cho doanh thu, sản phẩm và giao hàng.
 
-The project ingests raw retail CSV data into PostgreSQL, validates data quality at ingestion time, tracks ingestion runs, and uses dbt to transform raw data into clean staging models and analytics-ready marts.
+Project được xây dựng để thể hiện kỹ năng Data Engineering nền tảng: ingestion, validation, warehouse modeling, data quality và documentation.
 
-The final marts support common business questions around revenue, product performance, and delivery performance.
+## 2. Bài toán kinh doanh
 
-## 2. Business Problem
+Dữ liệu bán lẻ dạng CSV thường khó dùng trực tiếp cho phân tích vì thiếu chuẩn hóa, có khả năng trùng khóa, thiếu cột quan trọng hoặc quan hệ giữa bảng chưa được kiểm tra.
+Business cần các bảng sạch hơn để trả lời câu hỏi về doanh thu theo ngày, sản phẩm bán tốt và hiệu quả giao hàng.
 
-Retail teams need reliable analytics for revenue, customer behavior, product performance, and delivery operations.
+## 3. Pipeline end-to-end
 
-Raw operational data is often duplicated, inconsistent, missing required fields, or difficult to query directly. This project solves that by building a small but structured ELT warehouse with clear data layers and validation.
-
-## 3. End-to-End Pipeline
-
+```text
 CSV retail data
-→ Python ingestion
-→ PostgreSQL raw layer
-→ metadata.ingestion_runs
-→ dbt staging models
-→ dbt marts
-→ SQL quality checks
-→ analytics outputs and screenshots
+-> Python ingestion
+-> PostgreSQL raw layer
+-> metadata.ingestion_runs
+-> dbt staging models
+-> dbt core marts
+-> dbt analytics marts
+-> dbt tests and SQL checks
+-> analytics outputs
+```
 
-## 4. What I Implemented
+## 4. Những phần đã triển khai
 
-- Config-driven CSV ingestion using Python.
-- Required column validation before loading.
-- Primary key and composite primary key validation.
+- Config-driven CSV ingestion bằng Python.
+- Required column validation.
+- Primary key và composite primary key null validation.
 - Column name normalization.
-- Idempotent reload strategy using TRUNCATE + INSERT.
-- Ingestion run tracking with row count, status, start time, finish time, and error message.
-- dbt staging models for cleaned source tables.
-- dbt core marts including dimension and fact tables.
-- Analytics marts for daily revenue, product performance, and delivery performance.
-- dbt tests and manual SQL data quality checks.
-- Documentation, screenshots, and interview notes.
+- Duplicate handling theo primary key, giữ bản ghi cuối cùng.
+- Idempotent reload bằng `TRUNCATE + INSERT`.
+- Ingestion run tracking với row count, status, timestamps và error message.
+- dbt staging models cho 6 raw sources.
+- Core marts gồm dimension và fact tables.
+- Analytics marts cho daily revenue, product performance và delivery performance.
+- dbt tests, source freshness và SQL data quality checks.
+- pytest cho validators và table config.
+- Documentation và screenshots kết quả chạy.
 
-## 5. Key Engineering Decisions
+## 5. Các quyết định kỹ thuật chính
 
-### Why Python ingestion?
+### Vì sao dùng Python ingestion?
 
-Python gives flexibility for reading CSV files, validating required columns, handling errors, logging pipeline status, and loading data into PostgreSQL.
+Python phù hợp để đọc CSV, validate schema, xử lý lỗi, log trạng thái và load dữ liệu vào PostgreSQL bằng pandas/SQLAlchemy.
 
-### Why PostgreSQL?
+### Vì sao dùng PostgreSQL?
 
-PostgreSQL is lightweight, popular, easy to run with Docker, and suitable for practicing warehouse-style SQL, dbt models, and analytics queries.
+PostgreSQL dễ chạy local bằng Docker, hỗ trợ SQL tốt và tích hợp với dbt-postgres. Đây là lựa chọn hợp lý cho MVP portfolio trước khi mở rộng sang cloud warehouse.
 
-### Why dbt?
+### Vì sao dùng dbt?
 
-dbt helps organize SQL transformations into clear layers, manage dependencies with ref(), and add data tests such as not_null, unique, relationships, and accepted_values.
+dbt giúp chia transformation thành model rõ ràng, quản lý dependency bằng `ref()`, định nghĩa tests và thể hiện data lineage tốt hơn so với SQL scripts rời rạc.
 
-### Why raw, staging, and marts?
+### Vì sao tách raw, staging và marts?
 
-Raw keeps the original loaded data. Staging standardizes and cleans data. Marts are analytics-ready tables designed for business reporting and dashboarding.
+Raw giữ dữ liệu gần nguồn. Staging chuẩn hóa kỹ thuật. Marts chứa business logic và bảng phục vụ analytics. Cách tách này giúp dễ debug, dễ test và dễ mở rộng.
 
-## 6. Data Quality Strategy
+## 6. Data quality strategy
 
-The project includes data quality checks at multiple levels:
+Project kiểm soát data quality ở 3 lớp:
 
-- Ingestion validation: required columns, primary keys, input file existence.
-- dbt tests: not_null, unique, relationships, accepted_values.
-- SQL checks: duplicates, nulls, orphan records, negative values, and mart sanity checks.
+- Ingestion validation: file tồn tại, required columns, primary key/composite key không null.
+- dbt tests: `not_null`, `unique`, `relationships`, `accepted_values` và source freshness.
+- SQL checks: duplicate, null, orphan records, negative values và logic checks.
 
-## 7. Current Limitations
+## 7. Giới hạn hiện tại
 
-The current MVP does not yet include Airflow orchestration, GitHub Actions CI/CD, Metabase dashboard, AWS deployment notes, SCD Type 2 snapshots, or incremental models.
+Project chưa có Airflow orchestration, GitHub Actions CI/CD, dashboard BI hoàn chỉnh, incremental models, SCD Type 2 hoặc AWS deployment.
+Các phần này được đặt trong Future Improvements để tránh overclaim.
 
-These are planned future improvements after the MVP is stable.
+## 8. Interview pitch 60 giây
 
-## 8. Interview Pitch - 60 Seconds
-
-This project is a Modern Retail ELT Warehouse MVP. I used Python to ingest raw retail CSV data into PostgreSQL, with validation for required columns, primary keys, column normalization, logging, and ingestion run tracking. Then I used dbt to transform raw data into staging models and analytics-ready marts such as daily revenue, product performance, and delivery performance. I also added dbt tests and manual SQL quality checks to detect nulls, duplicates, orphan records, and invalid business data. The goal of the project is to show a practical ELT workflow with data quality, clear modeling layers, and business-facing analytics outputs.
+Modern Retail ELT Warehouse là project ELT cho dữ liệu bán lẻ dạng CSV.
+Em dùng Python để ingest dữ liệu vào PostgreSQL raw layer, có validation required columns, primary key/composite key, duplicate handling và logging.
+Pipeline cũng có metadata tracking trong `metadata.ingestion_runs`.
+Sau đó em dùng dbt để xây staging models, dimension/fact tables và analytics marts như `mart_daily_revenue`, `mart_product_performance`, `mart_delivery_performance`.
+Project cũng có dbt tests, source freshness, SQL data quality checks và pytest để kiểm soát chất lượng dữ liệu ở nhiều lớp.
