@@ -1,13 +1,7 @@
 param(
-    [string]$Command = "debug",
+    [string]$Command = "build",
     [string]$Select = ""
 )
-
-$env:POSTGRES_HOST="localhost"
-$env:POSTGRES_PORT="5433"
-$env:POSTGRES_DB="retail_dw"
-$env:POSTGRES_USER="retail_user"
-$env:POSTGRES_PASSWORD="retail_password"
 
 $ProjectDir = "dbt"
 $ProfilesDir = "dbt"

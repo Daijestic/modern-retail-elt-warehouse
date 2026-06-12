@@ -3,10 +3,22 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+.pytest_cache/
+.mypy_cache/
+coverage.xml
+htmlcov/
 .DS_Store
-
-data/raw/
-!data/raw/.gitkeep
 
 dbt/logs/
 dbt/target/
+dbt/dbt_packages/
+
+*.log
+*.tmp
+*.bak
+
+data/raw/
+data/raw/*.csv
+data/raw/*.generated.csv
+data/raw/*.tmp
+!data/raw/README_SAMPLE_DATA.md

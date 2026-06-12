@@ -1,16 +1,26 @@
 services:
   postgres:
-    image: postgres:16
-    container_name: retail_postgres
+    image: postgres:16.4
+    container_name: ${POSTGRES_CONTAINER_NAME:-retail_postgres}
     environment:
-      POSTGRES_USER: retail_user
-      POSTGRES_PASSWORD: retail_password
-      POSTGRES_DB: retail_dw
+      POSTGRES_USER: ${POSTGRES_USER:-retail_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-retail_password}
+      POSTGRES_DB: ${POSTGRES_DB:-retail_dw}
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-retail_user} -d ${POSTGRES_DB:-retail_dw}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
 
 volumes:
   postgres_data:

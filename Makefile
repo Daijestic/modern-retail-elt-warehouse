@@ -1,69 +1,65 @@
+PYTHON ?= python
+PROJECT_CLI = $(PYTHON) scripts/project_cli.py
+
+compose-config:
+	$(PROJECT_CLI) compose-config
+
 up:
-	docker compose up -d
+	$(PROJECT_CLI) up
 
 down:
-	docker compose down
+	$(PROJECT_CLI) down
 
 reset:
-	docker compose down -v
-	docker compose up -d
+	$(PROJECT_CLI) reset
 
 logs:
-	docker compose logs -f
-
-ps:
-	docker compose ps
+	$(PROJECT_CLI) logs --follow
 
 install:
-	pip install -r requirements.txt
+	$(PYTHON) -m pip install -r requirements.txt
+
+prepare-sample-data:
+	$(PROJECT_CLI) prepare-sample-data
+
+init-db:
+	$(PROJECT_CLI) init-db
+
+wait-for-postgres:
+	$(PROJECT_CLI) wait-for-postgres
 
 load:
-	python -m ingestion.load_csv_to_postgres
+	$(PROJECT_CLI) load
+
+dbt-deps:
+	$(PROJECT_CLI) dbt-deps
+
+dbt-parse:
+	$(PROJECT_CLI) dbt-parse
+
+dbt-build:
+	$(PROJECT_CLI) dbt-build
+
+dbt-docs:
+	$(PROJECT_CLI) dbt-docs
+
+verify:
+	$(PROJECT_CLI) verify
+
+demo:
+	$(PROJECT_CLI) demo
 
 test:
-	pytest
+	$(PROJECT_CLI) test
 
-sql:
-	docker exec -it retail_postgres psql -U retail_user -d retail_dw
+check:
+	$(PROJECT_CLI) check
 
-run-sql:
-	docker exec -i retail_postgres psql -U retail_user -d retail_dw < $(FILE)
+lint:
+	$(PROJECT_CLI) lint
 
-sql-practice:
-	docker exec -i retail_postgres psql -U retail_user -d retail_dw < sql_practice/01_basic_select.sql
-	docker exec -i retail_postgres psql -U retail_user -d retail_dw < sql_practice/02_joins.sql
-	docker exec -i retail_postgres psql -U retail_user -d retail_dw < sql_practice/03_cte.sql
-	docker exec -i retail_postgres psql -U retail_user -d retail_dw < sql_practice/04_window_functions.sql
-	docker exec -i retail_postgres psql -U retail_user -d retail_dw < sql_practice/05_data_quality_checks.sql
-	docker exec -i retail_postgres psql -U retail_user -d retail_dw < sql_practice/06_business_analysis.sql
+clean:
+	$(PROJECT_CLI) clean
 
-sample-data:
-	cp data/sample/customers.csv data/raw/customers.csv
-	cp data/sample/orders.csv data/raw/orders.csv
-
-dbt-debug:
-	powershell -ExecutionPolicy Bypass -File scripts/dbt.ps1 -Command debug
-
-dbt-run:
-	powershell -ExecutionPolicy Bypass -File scripts/dbt.ps1 -Command run
-
-dbt-test:
-	powershell -ExecutionPolicy Bypass -File scripts/dbt.ps1 -Command test
-
-dbt-run-staging:
-	powershell -ExecutionPolicy Bypass -File scripts/dbt.ps1 -Command run -Select staging
-
-dbt-test-staging:
-	powershell -ExecutionPolicy Bypass -File scripts/dbt.ps1 -Command test -Select staging
-
-dbt-run-marts:
-	powershell -ExecutionPolicy Bypass -File scripts/dbt.ps1 -Command run -Select marts
-
-dbt-test-marts:
-	powershell -ExecutionPolicy Bypass -File scripts/dbt.ps1 -Command test -Select marts
-
-dbt-freshness:
-	powershell -ExecutionPolicy Bypass -File scripts/dbt.ps1 -Command freshness
-	
-dbt-docs:
-	dbt docs generate --project-dir dbt --profiles-dir dbt
+ci-local:
+	$(PROJECT_CLI) ci-local
