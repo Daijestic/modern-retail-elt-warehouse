@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.4
+        env:
+          POSTGRES_DB: retail_dw
+          POSTGRES_USER: retail_user
+          POSTGRES_PASSWORD: retail_password
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U retail_user -d retail_dw"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      CI: "true"
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5433
+      POSTGRES_DB: retail_dw
+      POSTGRES_USER: retail_user
+      POSTGRES_PASSWORD: retail_password
+      DBT_TARGET: dev
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Validate Docker Compose configuration
+        run: docker compose -f docker-compose.yml config
+
+      - name: Compile Python sources
+        run: python -m compileall ingestion scripts tests
+
+      - name: Prepare database objects
+        run: |
+          python scripts/project_cli.py wait-for-postgres
+          python scripts/project_cli.py init-db
+
+      - name: Run unit tests
+        run: python -m pytest tests/unit -q
+
+      - name: Run ingestion integration tests
+        run: python -m pytest tests/integration/test_ingestion_pipeline.py -q
+
+      - name: Run dbt deps
+        run: python scripts/project_cli.py dbt-deps
+
+      - name: Run dbt parse
+        run: python scripts/project_cli.py dbt-parse
+
+      - name: Run dbt integration test
+        run: python -m pytest tests/integration/test_dbt_project.py -q
+
+      - name: Generate dbt docs
+        run: python scripts/project_cli.py dbt-docs
+
+      - name: Verify warehouse outputs
+        run: python scripts/project_cli.py verify
+
+      - name: Upload debug artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-debug-artifacts
+          path: |
+            dbt/logs
+            dbt/target
+            .pytest_cache
