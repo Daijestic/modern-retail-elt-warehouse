@@ -2,10 +2,9 @@ version: 2
 
 sources:
   - name: raw
-    database: retail_dw
+    database: "{{ env_var('POSTGRES_DB', 'retail_dw') }}"
     schema: raw
-    description: "Raw retail tables loaded by the Python ingestion pipeline."
-
+    description: "Snapshot ở tầng landing đã được kiểm soát, được nạp bởi pipeline ingestion viết bằng Python."
     freshness:
       warn_after:
         count: 24
@@ -14,22 +13,68 @@ sources:
         count: 48
         period: hour
     loaded_at_field: ingested_at
-
     tables:
       - name: raw_customers
-        description: "Raw customer data."
-
+        description: "Snapshot khách hàng ở tầng landing, có kèm các cột provenance để truy vết nguồn."
+        columns:
+          - name: customer_id
+            tests:
+              - not_null
+              - unique
+          - name: _ingestion_run_id
+            tests:
+              - not_null
+          - name: _source_row_number
+            tests:
+              - not_null
       - name: raw_orders
-        description: "Raw order data."
-
+        description: "Snapshot đơn hàng ở tầng landing trước khi được ép kiểu dữ liệu ở tầng staging."
+        columns:
+          - name: order_id
+            tests:
+              - not_null
+              - unique
+          - name: customer_id
+            tests:
+              - not_null
+          - name: order_status
+            tests:
+              - not_null
       - name: raw_order_items
-        description: "Raw order item data."
-
+        description: "Snapshot order item ở tầng landing, với một dòng hợp lệ cho mỗi khóa nghiệp vụ."
+        columns:
+          - name: order_id
+            tests:
+              - not_null
+          - name: order_item_id
+            tests:
+              - not_null
+          - name: price
+            tests:
+              - not_null
       - name: raw_products
-        description: "Raw product catalog data."
-
+        description: "Snapshot danh mục sản phẩm ở tầng landing."
+        columns:
+          - name: product_id
+            tests:
+              - not_null
+              - unique
       - name: raw_payments
-        description: "Raw payment transaction data."
-
+        description: "Snapshot thanh toán ở tầng landing."
+        columns:
+          - name: order_id
+            tests:
+              - not_null
+          - name: payment_sequential
+            tests:
+              - not_null
+          - name: payment_value
+            tests:
+              - not_null
       - name: raw_shipments
-        description: "Raw shipment and delivery date data."
+        description: "Snapshot giao hàng ở tầng landing."
+        columns:
+          - name: order_id
+            tests:
+              - not_null
+              - unique

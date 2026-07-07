@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: stg_customers
-    description: "Cleaned customer records from raw customer data."
+    description: "Các dòng khách hàng đã được chuẩn hóa từ snapshot landing đã được kiểm soát."
     columns:
       - name: customer_id
         tests:
@@ -11,9 +11,12 @@ models:
       - name: customer_unique_id
         tests:
           - not_null
+      - name: landing_ingested_at
+        tests:
+          - not_null
 
   - name: stg_orders
-    description: "Cleaned order records with standardized status and timestamps."
+    description: "Các dòng đơn hàng đã được chuẩn hóa. Những khóa nghiệp vụ trùng lặp bị loại trong lúc ingestion và được audit trong metadata.ingestion_rejections."
     columns:
       - name: order_id
         tests:
@@ -30,18 +33,19 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values:
-                - created
-                - approved
-                - processing
-                - shipped
-                - delivered
-                - canceled
-                - unavailable
-                - invoiced
+              arguments:
+                values:
+                  - created
+                  - approved
+                  - processing
+                  - shipped
+                  - delivered
+                  - canceled
+                  - unavailable
+                  - invoiced
 
   - name: stg_order_items
-    description: "Cleaned order item records at order-item grain."
+    description: "Các dòng order item đã được chuẩn hóa ở grain order-item."
     columns:
       - name: order_item_key
         tests:
@@ -69,7 +73,7 @@ models:
           - not_null
 
   - name: stg_products
-    description: "Cleaned product catalog records."
+    description: "Các dòng danh mục sản phẩm đã được chuẩn hóa."
     columns:
       - name: product_id
         tests:
@@ -80,7 +84,7 @@ models:
           - not_null
 
   - name: stg_payments
-    description: "Cleaned payment records at order-payment-sequence grain."
+    description: "Các dòng thanh toán đã được chuẩn hóa ở grain order-payment-sequence."
     columns:
       - name: payment_key
         tests:
@@ -101,7 +105,7 @@ models:
           - not_null
 
   - name: stg_shipments
-    description: "Cleaned shipment and delivery date records."
+    description: "Các dòng giao hàng đã được chuẩn hóa và căn chỉnh theo grain đơn hàng."
     columns:
       - name: order_id
         tests:
