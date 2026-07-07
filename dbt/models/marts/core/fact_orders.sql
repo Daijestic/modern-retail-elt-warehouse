@@ -5,7 +5,7 @@ with item_summary as (
         count(*) as item_count,
         sum(item_price) as total_item_price,
         sum(freight_value) as total_freight_value,
-        sum(gross_revenue) as total_order_value
+        sum(line_total_amount) as total_order_value
     from {{ ref('fact_order_items') }}
     group by order_id
 
@@ -33,7 +33,10 @@ orders as (
         order_approved_at,
         order_delivered_customer_date,
         order_estimated_delivery_date,
-        ingested_at
+        ingestion_run_id,
+        source_file,
+        source_row_number,
+        landing_ingested_at
     from {{ ref('stg_orders') }}
 
 ),
@@ -55,10 +58,8 @@ select
     o.order_purchase_timestamp,
     o.order_date,
     o.order_approved_at,
-
     coalesce(s.delivered_customer_date, o.order_delivered_customer_date) as delivered_customer_date,
     coalesce(s.estimated_delivery_date, o.order_estimated_delivery_date) as estimated_delivery_date,
-
     case
         when coalesce(s.delivered_customer_date, o.order_delivered_customer_date) is not null
          and o.order_purchase_timestamp is not null
@@ -66,7 +67,6 @@ select
              - cast(o.order_purchase_timestamp as date)
         else null
     end as delivery_days,
-
     case
         when coalesce(s.delivered_customer_date, o.order_delivered_customer_date) is not null
          and coalesce(s.estimated_delivery_date, o.order_estimated_delivery_date) is not null
@@ -75,17 +75,16 @@ select
         then true
         else false
     end as is_late_delivery,
-
     coalesce(i.item_count, 0) as item_count,
     coalesce(i.total_item_price, 0) as total_item_price,
     coalesce(i.total_freight_value, 0) as total_freight_value,
     coalesce(i.total_order_value, 0) as total_order_value,
-
     coalesce(p.payment_count, 0) as payment_count,
     coalesce(p.total_payment_value, 0) as total_payment_value,
-
-    o.ingested_at
-
+    o.ingestion_run_id,
+    o.source_file,
+    o.source_row_number,
+    o.landing_ingested_at
 from orders o
 left join item_summary i
     on o.order_id = i.order_id

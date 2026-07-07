@@ -8,5 +8,8 @@ select
     product_length_cm,
     product_height_cm,
     product_width_cm,
-    ingested_at
+    ingestion_run_id,
+    source_file,
+    source_row_number,
+    landing_ingested_at
 from {{ ref('stg_products') }}

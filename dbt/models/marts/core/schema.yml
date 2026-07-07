@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: dim_customers
-    description: "Customer dimension table at customer_id grain."
+    description: "Bảng dimension khách hàng ở grain customer_id."
     columns:
       - name: customer_id
         tests:
@@ -14,7 +14,7 @@ models:
           - not_null
 
   - name: dim_products
-    description: "Product dimension table at product_id grain."
+    description: "Bảng dimension sản phẩm ở grain product_id."
     columns:
       - name: product_id
         tests:
@@ -26,7 +26,7 @@ models:
           - not_null
 
   - name: fact_order_items
-    description: "Fact table at order item grain."
+    description: "Bảng fact ở grain order item."
     columns:
       - name: order_item_key
         tests:
@@ -57,12 +57,12 @@ models:
         tests:
           - not_null
 
-      - name: gross_revenue
+      - name: line_total_amount
         tests:
           - not_null
 
   - name: fact_orders
-    description: "Fact table at order grain."
+    description: "Bảng fact ở grain đơn hàng."
     columns:
       - name: order_id
         tests:

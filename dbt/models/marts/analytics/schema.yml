@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: mart_daily_revenue
-    description: "Daily revenue mart for business reporting."
+    description: "Data mart doanh thu theo ngày phục vụ báo cáo nghiệp vụ."
     columns:
       - name: order_date
         tests:
@@ -13,16 +13,16 @@ models:
         tests:
           - not_null
 
-      - name: total_revenue
+      - name: gross_order_value
         tests:
           - not_null
 
-      - name: average_order_value
+      - name: average_gross_order_value
         tests:
           - not_null
 
   - name: mart_product_performance
-    description: "Product performance mart by product and category."
+    description: "Data mart hiệu quả sản phẩm theo sản phẩm và danh mục."
     columns:
       - name: product_id
         tests:
@@ -37,12 +37,24 @@ models:
         tests:
           - not_null
 
-      - name: total_revenue
+      - name: total_orders
+        tests:
+          - not_null
+
+      - name: total_item_revenue
+        tests:
+          - not_null
+
+      - name: total_freight_value
+        tests:
+          - not_null
+
+      - name: gross_order_value
         tests:
           - not_null
 
   - name: mart_delivery_performance
-    description: "Delivery performance mart at order grain."
+    description: "Data mart hiệu quả giao hàng ở grain đơn hàng."
     columns:
       - name: order_id
         tests:
