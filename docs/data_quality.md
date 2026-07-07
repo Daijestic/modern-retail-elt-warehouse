@@ -1,102 +1,77 @@
-# Data Quality
+# Chất lượng dữ liệu
 
-## 1. Vì sao data quality quan trọng
+## Các lớp kiểm soát chất lượng
 
-Data warehouse chỉ hữu ích khi dữ liệu đủ tin cậy để phân tích.
-Với dữ liệu bán lẻ, lỗi như thiếu khóa, duplicate orders, orphan records hoặc doanh thu âm có thể làm sai báo cáo doanh thu, sản phẩm và giao hàng.
+Dự án áp dụng kiểm soát chất lượng dữ liệu ở ba lớp:
 
-Project này kiểm soát data quality ở nhiều lớp để lỗi được phát hiện sớm và dễ debug.
+1. kiểm tra hợp lệ bằng Python trước khi dữ liệu được nạp vào PostgreSQL
+2. ghi metadata và lưu vết bản ghi bị loại trong PostgreSQL trong lúc ingestion
+3. test ở source, model và business rule trong dbt sau bước transform
 
-```text
-Python ingestion validation
--> dbt tests and source freshness
--> SQL quality checks
-```
+## Quy tắc kiểm tra hợp lệ ở ingestion
 
-## 2. Data quality ở ingestion layer
+Kiểm tra ở mức file:
 
-Ingestion layer nằm trong `ingestion/load_csv_to_postgres.py` và `ingestion/validators.py`.
+- file tồn tại
+- file không rỗng
+- file có thể giải mã bằng UTF-8
+- có đầy đủ cột bắt buộc
+- tên cột sau chuẩn hóa không bị va chạm
+- không có cột ngoài mong đợi sau khi chuẩn hóa
 
-Các rule hiện có:
+Kiểm tra ở mức từng dòng:
 
-- Kiểm tra source file tồn tại trước khi đọc CSV.
-- Normalize column names bằng cách trim và chuyển lowercase.
-- Kiểm tra required columns theo `ingestion/table_config.py`.
-- Kiểm tra primary key hoặc composite key tồn tại trong DataFrame.
-- Kiểm tra primary key/composite key không null.
-- Ép key columns sang string trước khi xử lý duplicate.
-- Nếu duplicate theo key, ghi warning và giữ bản ghi cuối cùng.
-- Load idempotent bằng `TRUNCATE TABLE raw.<table>` rồi insert dữ liệu mới.
-- Ghi kết quả chạy vào `metadata.ingestion_runs`.
-- Khi lỗi xảy ra, log exception và lưu `status = FAILED` cùng `error_message`.
+- cột khóa chính không được null hoặc rỗng
+- giá trị khóa chính không được trùng trong cùng file
+- các cột số được cấu hình phải ép kiểu được
+- các cột timestamp được cấu hình phải ép kiểu được
+- các giá trị phân loại được cấu hình phải thuộc tập hỗ trợ
+- các cột giá tiền được cấu hình không được âm
 
-Primary key/composite key hiện được cấu hình:
+## Chính sách xử lý lỗi và bản ghi bị loại
 
-| Source | Key |
-| --- | --- |
-| customers | `customer_id` |
-| orders | `order_id` |
-| order_items | `order_id`, `order_item_id` |
-| products | `product_id` |
-| payments | `order_id`, `payment_sequential` |
-| shipments | `order_id` |
+Lỗi cấp file và lỗi cấp dòng được lưu ở hai nơi khác nhau:
 
-## 3. Data quality ở dbt layer
+- lỗi cấp file làm bảng đó thất bại và được ghi vào `metadata.ingestion_runs.error_type` cùng `metadata.ingestion_runs.error_message`
+- lỗi cấp dòng được ghi từng dòng vào `metadata.ingestion_rejections`
 
-dbt tests được định nghĩa trong các file `schema.yml` của staging, core marts và analytics marts.
+Các `error_type` cấp file phổ biến:
 
-Các loại test hiện có:
+- `MISSING_REQUIRED_COLUMN`
+- `UNEXPECTED_COLUMN`
+- `DUPLICATED_COLUMN_NAME`
+- `EMPTY_FILE`
+- `ENCODING_ERROR`
+- `SCHEMA_DRIFT`
+- `NO_VALID_ROWS`
+- `FileNotFoundError`
 
-- `not_null`: kiểm tra cột bắt buộc không null.
-- `unique`: kiểm tra key hoặc mart grain không bị trùng.
-- `relationships`: kiểm tra foreign key giữa staging/fact/dimension.
-- `accepted_values`: kiểm tra `order_status` nằm trong danh sách hợp lệ.
+Các `reason_code` cấp dòng phổ biến trong `metadata.ingestion_rejections`:
 
-Project cũng có source freshness trong `dbt/models/sources.yml`, dùng `ingested_at` với ngưỡng cảnh báo 24 giờ và lỗi 48 giờ.
+- `DUPLICATE_PRIMARY_KEY`
+- `NULL_PRIMARY_KEY`
+- `INVALID_TIMESTAMP`
+- `INVALID_NUMERIC_VALUE`
+- `NEGATIVE_PRICE`
+- `UNSUPPORTED_STATUS`
 
-Command liên quan:
+Chính sách chung:
 
-```bash
-make dbt-test
-make dbt-freshness
-```
+- lỗi ở mức data contract của file sẽ làm bảng đó thất bại
+- lỗi dữ liệu ở mức từng dòng sẽ được cách ly
+- các dòng bị loại không được nạp vào `raw`
+- dbt chỉ đọc các dòng hợp lệ đã được nạp vào tầng landing
 
-## 4. SQL quality checks
+## dbt tests
 
-Manual SQL checks nằm trong `sql_practice/05_data_quality_checks.sql`.
+dbt hiện bổ sung:
 
-Nhóm check hiện có:
+- test `not_null` và `unique` ở source trong những trường hợp phù hợp
+- test `not_null`, `unique`, `relationships` và `accepted_values` ở tầng staging
+- kiểm tra relationship và grain ở tầng core
+- kiểm tra business rule để đối soát doanh thu không âm và tính nhất quán giữa mart với fact
 
-- Null check: ví dụ `customer_id` trong orders, `order_id` trong order_items.
-- Duplicate check: customers, orders, products.
-- Orphan records: orders không có customer, order_items không có order hoặc product.
-- Negative value checks: price, freight value, payment value.
-- Logic checks: delivered date trước purchase date, delivery days âm.
-- Mart sanity checks: revenue âm trong `mart_daily_revenue` và `mart_product_performance`.
+## Vì sao bản ghi bị loại tách khỏi landing snapshot
 
-Chạy SQL checks:
-
-```bash
-make run-sql FILE=sql_practice/05_data_quality_checks.sql
-```
-
-Nếu dbt target schema khác `marts`, cần chỉnh schema trong SQL checks cho phù hợp trước khi chạy.
-
-## 5. Khi test fail thì xử lý thế nào
-
-1. Xác định fail ở layer nào: ingestion, dbt test, source freshness hay SQL check.
-2. Nếu ingestion fail, xem log và bảng `metadata.ingestion_runs` để biết source, target table và error message.
-3. Nếu dbt test fail, kiểm tra model liên quan và query dữ liệu lỗi bằng SQL.
-4. Nếu source freshness fail, kiểm tra ingestion gần nhất và giá trị `ingested_at` trong raw tables.
-5. Nếu SQL check trả về rows, coi đó là các record cần điều tra thay vì bỏ qua.
-6. Sau khi sửa dữ liệu hoặc logic, chạy lại ingestion/dbt/test tương ứng để xác nhận.
-
-## 6. Quality rule nên bổ sung trong tương lai
-
-- Custom dbt singular tests cho negative revenue và delivery logic.
-- Test đối chiếu `total_order_value` với tổng order items.
-- Test đối chiếu `total_payment_value` với order value khi business rule cho phép.
-- Test ngày đặt hàng không nằm trong tương lai.
-- Test delivered orders phải có delivered date.
-- CI/CD quality gate chạy pytest, dbt compile, dbt test và source freshness.
-- Data quality dashboard hoặc alert khi pipeline fail.
+Schema `raw` được xem là một landing snapshot đã được kiểm soát, không phải bản sao byte-for-byte hoàn hảo của file gốc.
+Các bản ghi bị loại vẫn có thể audit lại, nhưng được tách khỏi dữ liệu landing đáng tin cậy để các model dbt ở phía sau không phải tự lọc thủ công dữ liệu lỗi.
